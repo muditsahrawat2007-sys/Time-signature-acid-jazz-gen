@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Time in Motion | Acid Jazz Generator</title>
+<style>
+  :root {
+    --ink: #f8f4eb;
+    --muted: #b9b4aa;
+    --accent: #e3f26b;
+    --coral: #f07f68;
+    --teal: #73c8b6;
+    --surface: #1d2422;
+    --line: rgba(248, 244, 235, 0.16);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #111918;
+    color: var(--ink);
+    font-family: "DM Sans", sans-serif;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.45;
+    background-image: linear-gradient(rgba(115, 200, 182, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(115, 200, 182, 0.05) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
+  main { width: min(1120px, 100%); margin: 0 auto; padding: 34px 28px 72px; position: relative; }
+  header { display: flex; align-items: end; justify-content: space-between; gap: 32px; margin-bottom: 38px; }
+  .eyebrow { color: var(--accent); font: 500 12px/1 "DM Mono", monospace; letter-spacing: 0.08em; text-transform: uppercase; margin: 0 0 14px; }
+  h1 { font: 500 clamp(3rem, 7vw, 6.7rem)/0.88 "Fraunces", serif; letter-spacing: 0; max-width: 720px; margin: 0; }
+  .intro { color: var(--muted); font-size: 16px; line-height: 1.55; max-width: 285px; margin: 0 0 5px; }
+  .console { background: var(--surface); border: 1px solid var(--line); padding: clamp(14px, 3vw, 24px); box-shadow: 0 24px 80px rgba(0, 0, 0, 0.26); }
+
+  canvas {
+    display: block;
+    width: 100% !important;
+    height: auto !important;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  #sketch { min-height: 350px; position: relative; background: #121212; border-radius: 8px; overflow: hidden; }
+  #sketch-status { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font: 13px "DM Mono", monospace; }
+  #sketch-status[hidden] { display: none; }
+
+  .hint { color: var(--muted); font: 400 12px/1.4 "DM Mono", monospace; margin: 14px 2px 0; text-align: center; }
+  .lesson { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); margin-top: 38px; border: 1px solid var(--line); }
+  .lesson article { background: rgba(17, 25, 24, 0.94); padding: 28px clamp(20px, 4vw, 42px); min-height: 245px; }
+  .lesson article:first-child { border-top: 3px solid var(--accent); }
+  .lesson article:last-child { border-top: 3px solid var(--coral); }
+  .lesson article:nth-child(3) { grid-column: 1 / -1; border-top: 3px solid var(--teal); min-height: 0; }
+  .section-label { color: var(--teal); font: 500 11px/1 "DM Mono", monospace; letter-spacing: 0.08em; text-transform: uppercase; }
+  h2 { font: 500 clamp(1.8rem, 3vw, 2.8rem)/1 "Fraunces", serif; margin: 17px 0 14px; }
+  article p { color: var(--muted); line-height: 1.65; margin: 0; max-width: 470px; }
+  .signature { display: flex; align-items: center; gap: 20px; margin: 17px 0 15px; }
+  .big-four { font: 500 74px/0.75 "Fraunces", serif; color: var(--accent); border-right: 1px solid var(--line); padding-right: 20px; }
+  .signature strong { display: block; color: var(--ink); font: 500 17px "DM Mono", monospace; margin-bottom: 5px; }
+  .signature span { color: var(--muted); font: 12px/1.4 "DM Mono", monospace; }
+  .beat-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 4px; margin: 20px 0 11px; }
+  .beat-grid i { height: 24px; background: rgba(248, 244, 235, 0.14); display: block; }
+  .beat-grid i:nth-child(4n + 1) { background: var(--coral); }
+  .beat-caption { display: flex; justify-content: space-between; color: var(--muted); font: 11px "DM Mono", monospace; }
+  footer { display: flex; justify-content: space-between; gap: 16px; color: var(--muted); font: 11px "DM Mono", monospace; margin-top: 20px; }
+
+  @media (max-width: 600px) {
+    main { padding: 24px 12px 48px; }
+    header { align-items: start; flex-direction: column; gap: 20px; margin-bottom: 25px; }
+    .intro { max-width: 360px; }
+    .console { padding: 8px; }
+    .lesson { grid-template-columns: 1fr; margin-top: 25px; }
+    .lesson article { min-height: 0; }
+    footer { flex-direction: column; }
+  }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500&family=Fraunces:opsz,wght@9..144,500&display=swap" rel="stylesheet">
+<!-- p5.js core library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.13/p5.min.js"></script>
+<!-- p5.sound library, needed for Oscillator / Noise / HighPass -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.13/addons/p5.sound.min.js"></script>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <p class="eyebrow">Listening lesson / 01</p>
+      <h1>Time in<br>motion.</h1>
+    </div>
+    <p class="intro">Hear a smooth acid-jazz groove, then see the musical clock underneath it.</p>
+  </header>
+  <section class="console" aria-label="Acid jazz music player">
+    <div id="sketch"><div id="sketch-status">Loading audio console...</div></div>
+    <p class="hint">Click the console to start or stop the groove · 96 BPM · swing feel</p>
+  </section>
+  <section class="lesson" aria-label="Time signature explanation">
+    <article>
+      <span class="section-label">The fraction</span>
+      <h2>What does 4/4 mean?</h2>
+      <div class="signature"><span class="big-four">4<br><small>/</small>4</span><div><strong>four beats</strong><span>quarter-note pulse</span></div></div>
+      <p>The top number says there are <b>four beats</b> in each bar. The bottom number says each beat is a quarter note. Count it as: <b>1 · 2 · 3 · 4</b>.</p>
+    </article>
+    <article>
+      <span class="section-label">Inside the groove</span>
+      <h2>One bar, 16 steps</h2>
+      <div class="beat-grid" aria-label="Sixteen sixteenth-note steps"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="beat-caption"><span>1</span><span>2</span><span>3</span><span>4</span></div>
+      <p>Each quarter-note beat splits into four sixteenth notes. The red markers are the four main beats; the smaller spaces are where the swing and syncopation live.</p>
+    </article>
+    <article>
+      <span class="section-label">How it locks</span>
+      <h2>One shared musical clock</h2>
+      <p>The sax phrase gives the groove its melodic voice. Then the 4/4 time signature lays a four-beat bar underneath it, giving the kick, snare, bass, guitar, and tube parts the same place to begin and return to. A crash at the start of the bar acts like a bright signpost, while every part follows the same 16-step count, keeping the full audio in sync.</p>
+    </article>
+  </section>
+  <footer><span>ACID JAZZ / 4⁄4 / 96 BPM</span><span>Made for listening, counting, and feeling</span></footer>
+</main>
+
+<script>
+let kickSound;
+let snareSound;
+let hatSound;
+let crashSound;
+let crashFilter;
+
+let bassSound;
+let saxSound;
+let guitarSound;
+let tubeSound;
+let subBassSound;
+
+let playing = false;
+let pendingTimeouts = [];
+
+let currentStep = 0;
+let currentBar = 0;
+let currentPart = 0;
+
+let lastStepTime = 0;
+
+const bpm = 96;
+const stepTime = (60000 / bpm) / 4;
+
+const swingAmount = 0.14;
+
+function scheduleEnvelope(callback, delay) {
+  const timeoutId = setTimeout(function() {
+    pendingTimeouts = pendingTimeouts.filter(function(id) {
+      return id !== timeoutId;
+    });
+    callback();
+  }, delay);
+  pendingTimeouts.push(timeoutId);
+}
+
+function getStepDuration(step) {
+  if (step % 2 === 1) {
+    return stepTime * (1 + swingAmount);
+  } else {
+    return stepTime * (1 - swingAmount);
+  }
+}
+
+const kickA = [
+  1,0,0,0,
+  0,0,1,0,
+  1,0,0,0,
+  0,0,1,0
+];
+
+const kickB = [
+  1,0,0,0,
+  0,0,1,0,
+  1,0,0,1,
+  0,0,1,0
+];
+
+const snarePattern = [
+  0,0,0,0,
+  1,0,0,0,
+  0,0,0,0,
+  1,0,0,0
+];
+
+const hatPattern = [
+  1,0,1,0,
+  1,0,1,0,
+  1,0,1,0,
+  1,0,1,0
+];
+
+const crashChance = 0.3;
+
+const bassA = [
+  36,36,36,36,
+  39,39,39,39,
+  41,41,41,41,
+  38,38,38,38
+];
+
+const bassB = [
+  36,36,36,36,
+  39,39,39,39,
+  41,41,43,43,
+  38,38,36,36
+];
+
+const saxA = [
+  64,64,67,67,
+  69,69,71,71,
+  69,69,67,67,
+  64,64,62,62
+];
+
+const saxB = [
+  67,67,69,69,
+  71,71,74,74,
+  71,71,69,69,
+  67,67,64,64
+];
+
+function setup() {
+  const canvas = createCanvas(700,350);
+  canvas.parent("sketch");
+  document.getElementById("sketch-status").hidden = true;
+  textAlign(CENTER,CENTER);
+
+  kickSound = new p5.Oscillator("sine");
+  snareSound = new p5.Noise("white");
+  hatSound = new p5.Noise("white");
+  crashSound = new p5.Noise("white");
+
+  crashFilter = new p5.HighPass();
+  crashSound.disconnect();
+  crashSound.connect(crashFilter);
+  crashFilter.freq(2200);
+  crashFilter.res(1);
+
+  bassSound = new p5.Oscillator("triangle");
+  saxSound = new p5.Oscillator("sawtooth");
+  guitarSound = new p5.Oscillator("triangle");
+  tubeSound = new p5.Oscillator("sine");
+  subBassSound = new p5.Oscillator("sine");
+
+  kickSound.start();
+  snareSound.start();
+  hatSound.start();
+  crashSound.start();
+
+  bassSound.start();
+  saxSound.start();
+  guitarSound.start();
+  tubeSound.start();
+  subBassSound.start();
+
+  kickSound.amp(0);
+  snareSound.amp(0);
+  hatSound.amp(0);
+  crashSound.amp(0);
+
+  bassSound.amp(0);
+  saxSound.amp(0);
+  guitarSound.amp(0);
+  tubeSound.amp(0);
+  subBassSound.amp(0);
+}
+
+function draw() {
+  background(18);
+  fill(255);
+  textSize(30);
+
+  text("Smooth Acid Jazz Generator", width/2, 60);
+
+  textSize(20);
+
+  if (playing) {
+    text("PLAYING", width/2, 120);
+  } else {
+    text("CLICK TO PLAY", width/2, 120);
+  }
+
+  text("Part " + (currentPart + 1), width/2, 165);
+  text("Bar " + (currentBar + 1), width/2, 200);
+
+  textSize(16);
+  text("96 BPM • Smooth Groove", width/2, 270);
+
+  if (!playing) {
+    return;
+  }
+
+  if (millis() - lastStepTime >= getStepDuration(currentStep)) {
+    lastStepTime = millis();
+    playCurrentStep();
+    currentStep++;
+
+    if (currentStep >= 16) {
+      currentStep = 0;
+      currentBar++;
+
+      if (currentBar >= 4) {
+        currentBar = 0;
+
+        if (currentPart === 0) {
+          currentPart = 1;
+        } else {
+          currentPart = 0;
+        }
+      }
+    }
+  }
+}
+
+function playCurrentStep() {
+  let kickPattern;
+  let bassPattern;
+  let melodyPattern;
+
+  if (currentPart === 0) {
+    kickPattern = kickA;
+    bassPattern = bassA;
+    melodyPattern = saxA;
+  } else {
+    kickPattern = kickB;
+    bassPattern = bassB;
+    melodyPattern = saxB;
+  }
+
+  if (kickPattern[currentStep] === 1) {
+    playKick();
+    playSubBass(bassPattern[currentStep] - 12);
+  }
+
+  if (snarePattern[currentStep] === 1) {
+    playSnare();
+  }
+
+  if (hatPattern[currentStep] === 1) {
+    playHat(currentStep % 4 === 0);
+  }
+
+  if (currentStep === 0) {
+    playCrash();
+  } else if (
+    currentStep === 4 ||
+    currentStep === 8 ||
+    currentStep === 12
+  ) {
+    if (random() < crashChance) {
+      playCrash();
+    }
+  }
+
+  playBass(bassPattern[currentStep]);
+  playSax(melodyPattern[currentStep]);
+
+  if (currentStep === 3 || currentStep === 11) {
+    playGuitar(52);
+  }
+
+  if (currentStep === 7 || currentStep === 15) {
+    playTube(48);
+  }
+}
+
+function playKick() {
+  kickSound.freq(110);
+  kickSound.amp(0.65, 0.01);
+  kickSound.freq(45, 0.18);
+
+  scheduleEnvelope(function() {
+    kickSound.amp(0, 0.20);
+  }, 180);
+}
+
+function playSnare() {
+  snareSound.amp(0.22, 0.005);
+
+  scheduleEnvelope(function() {
+    snareSound.amp(0, 0.12);
+  }, 80);
+}
+
+function playHat(accented) {
+  let level = accented ? 0.10 : 0.05;
+  hatSound.amp(level, 0.002);
+
+  scheduleEnvelope(function() {
+    hatSound.amp(0, 0.05);
+  }, 35);
+}
+
+function playCrash() {
+  crashSound.amp(0.38, 0.003);
+
+  scheduleEnvelope(function() {
+    crashSound.amp(0, 1.1);
+  }, 140);
+}
+
+function playBass(midi) {
+  let frequency = midiToFrequency(midi);
+
+  bassSound.freq(frequency, 0.08);
+  bassSound.amp(0.42, 0.08);
+
+  scheduleEnvelope(function() {
+    bassSound.amp(0.30, 0.15);
+  }, 250);
+}
+
+function playSax(midi) {
+  let frequency = midiToFrequency(midi);
+
+  saxSound.freq(frequency, 0.12);
+  saxSound.amp(0.13, 0.10);
+
+  scheduleEnvelope(function() {
+    saxSound.amp(0.10, 0.15);
+  }, 250);
+}
+
+function playGuitar(midi) {
+  let frequency = midiToFrequency(midi);
+
+  guitarSound.freq(frequency);
+  guitarSound.amp(0.10, 0.02);
+
+  scheduleEnvelope(function() {
+    guitarSound.amp(0, 0.30);
+  }, 180);
+}
+
+function playTube(midi) {
+  let frequency = midiToFrequency(midi);
+
+  tubeSound.freq(frequency);
+  tubeSound.amp(0.12, 0.05);
+
+  scheduleEnvelope(function() {
+    tubeSound.amp(0, 0.35);
+  }, 250);
+}
+
+function playSubBass(midi) {
+  let frequency = midiToFrequency(midi);
+
+  subBassSound.freq(frequency);
+  subBassSound.amp(0.35, 0.01);
+
+  scheduleEnvelope(function() {
+    subBassSound.amp(0, 0.20);
+  }, 190);
+}
+
+function midiToFrequency(midi) {
+  return 440 * Math.pow(2, (midi - 69) / 12);
+}
+
+function mousePressed() {
+  userStartAudio();
+
+  if (!playing) {
+    playing = true;
+    currentStep = 0;
+    currentBar = 0;
+    currentPart = 0;
+    lastStepTime = millis();
+    playCurrentStep();
+  } else {
+    playing = false;
+    stopEverything();
+  }
+}
+
+function stopEverything() {
+  pendingTimeouts.forEach(function(timeoutId) {
+    clearTimeout(timeoutId);
+  });
+  pendingTimeouts = [];
+
+  kickSound.amp(0);
+  snareSound.amp(0);
+  hatSound.amp(0);
+  crashSound.amp(0);
+  bassSound.amp(0);
+  saxSound.amp(0);
+  guitarSound.amp(0);
+  tubeSound.amp(0);
+  subBassSound.amp(0);
+}
+</script>
+</body>
+</html>
