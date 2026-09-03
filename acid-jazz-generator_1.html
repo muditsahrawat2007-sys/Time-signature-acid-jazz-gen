@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Smooth Acid Jazz Generator</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #121212;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+  canvas {
+    display: block;
+  }
+</style>
+<!-- p5.js core library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.13/p5.min.js"></script>
+<!-- p5.sound library, needed for Oscillator / Noise / HighPass -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.13/addons/p5.sound.min.js"></script>
+</head>
+<body>
+
+<script>
+let kickSound;
+let snareSound;
+let hatSound;
+let crashSound;
+let crashFilter;
+
+let bassSound;
+let saxSound;
+let guitarSound;
+let tubeSound;
+let subBassSound;
+
+let playing = false;
+
+let currentStep = 0;
+let currentBar = 0;
+let currentPart = 0;
+
+let lastStepTime = 0;
+
+const bpm = 96;
+const stepTime = (60000 / bpm) / 4;
+
+
+const swingAmount = 0.14; // 0 = straight, ~0.3 = heavy triplet swing
+
+function getStepDuration(step) {
+  if (step % 2 === 1) {
+    return stepTime * (1 + swingAmount);
+  } else {
+    return stepTime * (1 - swingAmount);
+  }
+}
+
+const kickA = [
+  1,0,0,0,
+  0,0,1,0,
+  1,0,0,0,
+  0,0,1,0
+];
+
+const kickB = [
+  1,0,0,0,
+  0,0,1,0,
+  1,0,0,1,
+  0,0,1,0
+];
+
+const snarePattern = [
+  0,0,0,0,
+  1,0,0,0,
+  0,0,0,0,
+  1,0,0,0
+];
+
+const hatPattern = [
+  1,0,1,0,
+  1,0,1,0,
+  1,0,1,0,
+  1,0,1,0
+];
+
+const crashChance = 0.3; // 30% chance on beats 2/3/4
+
+const bassA = [
+  36,36,36,36,
+  39,39,39,39,
+  41,41,41,41,
+  38,38,38,38
+];
+
+const bassB = [
+  36,36,36,36,
+  39,39,39,39,
+  41,41,43,43,
+  38,38,36,36
+];
+
+// More connected melody
+const saxA = [
+  64,64,67,67,
+  69,69,71,71,
+  69,69,67,67,
+  64,64,62,62
+];
+
+const saxB = [
+  67,67,69,69,
+  71,71,74,74,
+  71,71,69,69,
+  67,67,64,64
+];
+
+function setup() {
+  createCanvas(700,350);
+  textAlign(CENTER,CENTER);
+
+  kickSound = new p5.Oscillator("sine");
+  snareSound = new p5.Noise("white");
+  hatSound = new p5.Noise("white");
+  crashSound = new p5.Noise("white");
+
+  crashFilter = new p5.HighPass();
+  crashSound.disconnect();
+  crashSound.connect(crashFilter);
+  crashFilter.freq(2200);
+  crashFilter.res(1);
+
+  bassSound = new p5.Oscillator("triangle");
+  saxSound = new p5.Oscillator("sawtooth");
+  guitarSound = new p5.Oscillator("triangle");
+  tubeSound = new p5.Oscillator("sine");
+  subBassSound = new p5.Oscillator("sine");
+
+  kickSound.start();
+  snareSound.start();
+  hatSound.start();
+  crashSound.start();
+
+  bassSound.start();
+  saxSound.start();
+  guitarSound.start();
+  tubeSound.start();
+  subBassSound.start();
+
+  kickSound.amp(0);
+  snareSound.amp(0);
+  hatSound.amp(0);
+  crashSound.amp(0);
+
+  bassSound.amp(0);
+  saxSound.amp(0);
+  guitarSound.amp(0);
+  tubeSound.amp(0);
+  subBassSound.amp(0);
+}
+
+function draw() {
+  background(18);
+  fill(255);
+  textSize(30);
+
+  text(
+    "Smooth Acid Jazz Generator",
+    width/2,
+    60
+  );
+
+  textSize(20);
+
+  if (playing) {
+    text("PLAYING", width/2, 120);
+  } else {
+    text("CLICK TO PLAY", width/2, 120);
+  }
+
+  text("Part " + (currentPart + 1), width/2, 165);
+  text("Bar " + (currentBar + 1), width/2, 200);
+
+  textSize(16);
+  text("96 BPM • Smooth Groove", width/2, 270);
+
+  if (!playing) {
+    return;
+  }
+
+  if (millis() - lastStepTime >= getStepDuration(currentStep)) {
+    lastStepTime = millis();
+    playCurrentStep();
+    currentStep++;
+
+    if (currentStep >= 16) {
+      currentStep = 0;
+      currentBar++;
+
+      if (currentBar >= 4) {
+        currentBar = 0;
+
+        if (currentPart === 0) {
+          currentPart = 1;
+        } else {
+          currentPart = 0;
+        }
+      }
+    }
+  }
+}
+
+function playCurrentStep() {
+  let kickPattern;
+  let bassPattern;
+  let melodyPattern;
+
+  if (currentPart === 0) {
+    kickPattern = kickA;
+    bassPattern = bassA;
+    melodyPattern = saxA;
+  } else {
+    kickPattern = kickB;
+    bassPattern = bassB;
+    melodyPattern = saxB;
+  }
+
+  // KICK
+  if (kickPattern[currentStep] === 1) {
+    playKick();
+    playSubBass(bassPattern[currentStep] - 12);
+  }
+
+  if (snarePattern[currentStep] === 1) {
+    playSnare();
+  }
+
+  if (hatPattern[currentStep] === 1) {
+    playHat(currentStep % 4 === 0);
+  }
+
+  if (currentStep === 0) {
+    playCrash();
+  } else if (
+    currentStep === 4 ||
+    currentStep === 8 ||
+    currentStep === 12
+  ) {
+    if (random() < crashChance) {
+      playCrash();
+    }
+  }
+
+  playBass(bassPattern[currentStep]);
+  playSax(melodyPattern[currentStep]);
+
+  if (currentStep === 3 || currentStep === 11) {
+    playGuitar(52);
+  }
+
+  if (currentStep === 7 || currentStep === 15) {
+    playTube(48);
+  }
+}
+
+function playKick() {
+  kickSound.freq(110);
+  kickSound.amp(0.65, 0.01);
+  kickSound.freq(45, 0.18);
+
+  setTimeout(function() {
+    kickSound.amp(0, 0.20);
+  }, 180);
+}
+
+function playSnare() {
+  snareSound.amp(0.22, 0.005);
+
+  setTimeout(function() {
+    snareSound.amp(0, 0.12);
+  }, 80);
+}
+
+function playHat(accented) {
+  let level = accented ? 0.10 : 0.05;
+  hatSound.amp(level, 0.002);
+
+  setTimeout(function() {
+    hatSound.amp(0, 0.05);
+  }, 35);
+}
+
+function playCrash() {
+  crashSound.amp(0.38, 0.003);
+
+  setTimeout(function() {
+    crashSound.amp(0, 1.1);
+  }, 140);
+}
+
+function playBass(midi) {
+  let frequency = midiToFrequency(midi);
+
+  bassSound.freq(frequency, 0.08);
+  bassSound.amp(0.42, 0.08);
+
+  setTimeout(function() {
+    bassSound.amp(0.30, 0.15);
+  }, 250);
+}
+
+function playSax(midi) {
+  let frequency = midiToFrequency(midi);
+
+  saxSound.freq(frequency, 0.12);
+  saxSound.amp(0.13, 0.10);
+
+  setTimeout(function() {
+    saxSound.amp(0.10, 0.15);
+  }, 250);
+}
+
+function playGuitar(midi) {
+  let frequency = midiToFrequency(midi);
+
+  guitarSound.freq(frequency);
+  guitarSound.amp(0.10, 0.02);
+
+  setTimeout(function() {
+    guitarSound.amp(0, 0.30);
+  }, 180);
+}
+
+function playTube(midi) {
+  let frequency = midiToFrequency(midi);
+
+  tubeSound.freq(frequency);
+  tubeSound.amp(0.12, 0.05);
+
+  setTimeout(function() {
+    tubeSound.amp(0, 0.35);
+  }, 250);
+}
+
+function playSubBass(midi) {
+  let frequency = midiToFrequency(midi);
+
+  subBassSound.freq(frequency);
+  subBassSound.amp(0.35, 0.01);
+
+  setTimeout(function() {
+    subBassSound.amp(0, 0.20);
+  }, 190);
+}
+
+function midiToFrequency(midi) {
+  return 440 * Math.pow(2, (midi - 69) / 12);
+}
+
+function mousePressed() {
+  userStartAudio();
+
+  if (!playing) {
+    playing = true;
+    currentStep = 0;
+    currentBar = 0;
+    currentPart = 0;
+    lastStepTime = millis();
+    playCurrentStep();
+  } else {
+    playing = false;
+    stopEverything();
+  }
+}
+
+// =========================
+// STOP
+// =========================
+
+function stopEverything() {
+  kickSound.amp(0);
+  snareSound.amp(0);
+  hatSound.amp(0);
+  crashSound.amp(0);
+  bassSound.amp(0);
+  saxSound.amp(0);
+  guitarSound.amp(0);
+  tubeSound.amp(0);
+  subBassSound.amp(0); // fixed: was "trumpetSound" (undefined) in the original
+}
+</script>
+</body>
+</html>
