@@ -42,6 +42,14 @@
   h1 { font: 500 clamp(3rem, 7vw, 6.7rem)/0.88 "Fraunces", serif; letter-spacing: 0; max-width: 720px; margin: 0; }
   .intro { color: var(--muted); font-size: 16px; line-height: 1.55; max-width: 285px; margin: 0 0 5px; }
   .console { background: var(--surface); border: 1px solid var(--line); padding: clamp(14px, 3vw, 24px); box-shadow: 0 24px 80px rgba(0, 0, 0, 0.26); }
+  .console-controls { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 14px; }
+  .console-controls label { color: var(--muted); font: 500 11px "DM Mono", monospace; letter-spacing: 0.08em; }
+  #timeSigSelect { background: #121918; color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; font: 12px "DM Mono", monospace; cursor: pointer; }
+  #timeSigSelect:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .telemetry { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); margin-bottom: 14px; }
+  .telemetry div { background: #18201e; padding: 10px 12px; min-width: 0; }
+  .telemetry span { display: block; color: var(--muted); font: 10px "DM Mono", monospace; letter-spacing: 0.06em; text-transform: uppercase; }
+  .telemetry strong { display: block; color: var(--accent); font: 500 14px "DM Mono", monospace; margin-top: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   canvas {
     display: block;
@@ -79,6 +87,8 @@
     header { align-items: start; flex-direction: column; gap: 20px; margin-bottom: 25px; }
     .intro { max-width: 360px; }
     .console { padding: 8px; }
+    .console-controls { align-items: flex-start; flex-direction: column; }
+    .telemetry { grid-template-columns: repeat(2, 1fr); }
     .lesson { grid-template-columns: 1fr; margin-top: 25px; }
     .lesson article { min-height: 0; }
     footer { flex-direction: column; }
@@ -102,6 +112,16 @@
     <p class="intro">Hear a smooth acid-jazz groove, then see the musical clock underneath it.</p>
   </header>
   <section class="console" aria-label="Acid jazz music player">
+    <div class="console-controls">
+      <label for="timeSigSelect">TIME SIGNATURE</label>
+      <select id="timeSigSelect" aria-label="Choose time signature"></select>
+    </div>
+    <div class="telemetry" aria-label="Live sound properties">
+      <div><span>Frequency</span><strong id="frequencyValue">-- Hz</strong></div>
+      <div><span>Amplitude</span><strong id="amplitudeValue">--</strong></div>
+      <div><span>Timbre</span><strong id="timbreValue">Waiting</strong></div>
+      <div><span>Bar length</span><strong id="barLengthValue">16 steps</strong></div>
+    </div>
     <div id="sketch"><div id="sketch-status">Loading audio console...</div></div>
     <p class="hint">Click the console to start or stop the groove · 96 BPM · swing feel</p>
   </section>
@@ -154,6 +174,72 @@ const bpm = 96;
 const stepTime = (60000 / bpm) / 4;
 
 const swingAmount = 0.14;
+
+const timeSignatures = {
+  "4/4": [4, 4],
+  "3/4": [3, 4],
+  "5/4": [5, 4],
+  "7/4": [7, 4],
+  "6/8": [6, 8],
+  "7/8": [7, 8],
+  "9/8": [9, 8],
+  "11/8": [11, 8],
+  "4/3": [4, 3],
+  "9/10": [9, 10]
+};
+
+let currentSig = "4/4";
+let stepsPerBar = 16;
+let soundTelemetry = {
+  frequency: 0,
+  amplitude: 0,
+  timbre: "Waiting"
+};
+
+function updateTelemetry(frequency, amplitude, timbre) {
+  soundTelemetry.frequency = frequency;
+  soundTelemetry.amplitude = amplitude;
+  soundTelemetry.timbre = timbre;
+}
+
+function renderTelemetry() {
+  document.getElementById("frequencyValue").textContent = soundTelemetry.frequency
+    ? Math.round(soundTelemetry.frequency) + " Hz"
+    : "-- Hz";
+  document.getElementById("amplitudeValue").textContent = soundTelemetry.amplitude > 0
+    ? soundTelemetry.amplitude.toFixed(2)
+    : "--";
+  document.getElementById("timbreValue").textContent = soundTelemetry.timbre;
+  document.getElementById("barLengthValue").textContent = stepsPerBar + " steps";
+}
+
+function computeStepsPerBar(signature) {
+  const [beats, noteValue] = timeSignatures[signature];
+  return Math.max(1, Math.round(16 * beats / noteValue));
+}
+
+function setupTimeSignatureSelect() {
+  const select = document.getElementById("timeSigSelect");
+
+  Object.keys(timeSignatures).forEach(function(signature) {
+    const option = document.createElement("option");
+    option.value = signature;
+    option.textContent = signature;
+    option.selected = signature === currentSig;
+    select.appendChild(option);
+  });
+
+  select.addEventListener("change", function(event) {
+    currentSig = event.target.value;
+    stepsPerBar = computeStepsPerBar(currentSig);
+    currentStep = currentStep % stepsPerBar;
+    currentBar = 0;
+    renderTelemetry();
+  });
+}
+
+setupTimeSignatureSelect();
+renderTelemetry();
 
 function scheduleEnvelope(callback, delay) {
   const timeoutId = setTimeout(function() {
@@ -296,7 +382,7 @@ function draw() {
   text("Bar " + (currentBar + 1), width/2, 200);
 
   textSize(16);
-  text("96 BPM • Smooth Groove", width/2, 270);
+  text("96 BPM • " + currentSig + " • " + stepsPerBar + " steps/bar", width/2, 270);
 
   if (!playing) {
     return;
@@ -307,7 +393,7 @@ function draw() {
     playCurrentStep();
     currentStep++;
 
-    if (currentStep >= 16) {
+    if (currentStep >= stepsPerBar) {
       currentStep = 0;
       currentBar++;
 
@@ -339,44 +425,47 @@ function playCurrentStep() {
     melodyPattern = saxB;
   }
 
-  if (kickPattern[currentStep] === 1) {
+  const patternStep = currentStep % 16;
+
+  if (kickPattern[patternStep] === 1) {
     playKick();
-    playSubBass(bassPattern[currentStep] - 12);
+    playSubBass(bassPattern[patternStep] - 12);
   }
 
-  if (snarePattern[currentStep] === 1) {
+  if (snarePattern[patternStep] === 1) {
     playSnare();
   }
 
-  if (hatPattern[currentStep] === 1) {
-    playHat(currentStep % 4 === 0);
+  if (hatPattern[patternStep] === 1) {
+    playHat(patternStep % 4 === 0);
   }
 
-  if (currentStep === 0) {
+  if (patternStep === 0) {
     playCrash();
   } else if (
-    currentStep === 4 ||
-    currentStep === 8 ||
-    currentStep === 12
+    patternStep === 4 ||
+    patternStep === 8 ||
+    patternStep === 12
   ) {
     if (random() < crashChance) {
       playCrash();
     }
   }
 
-  playBass(bassPattern[currentStep]);
-  playSax(melodyPattern[currentStep]);
+  playBass(bassPattern[patternStep]);
+  playSax(melodyPattern[patternStep]);
 
-  if (currentStep === 3 || currentStep === 11) {
+  if (patternStep === 3 || patternStep === 11) {
     playGuitar(52);
   }
 
-  if (currentStep === 7 || currentStep === 15) {
+  if (patternStep === 7 || patternStep === 15) {
     playTube(48);
   }
 }
 
 function playKick() {
+  updateTelemetry(45, 0.65, "Sine kick");
   kickSound.freq(110);
   kickSound.amp(0.65, 0.01);
   kickSound.freq(45, 0.18);
@@ -387,6 +476,7 @@ function playKick() {
 }
 
 function playSnare() {
+  updateTelemetry(0, 0.22, "White noise");
   snareSound.amp(0.22, 0.005);
 
   scheduleEnvelope(function() {
@@ -396,6 +486,7 @@ function playSnare() {
 
 function playHat(accented) {
   let level = accented ? 0.10 : 0.05;
+  updateTelemetry(0, level, "White noise");
   hatSound.amp(level, 0.002);
 
   scheduleEnvelope(function() {
@@ -404,6 +495,7 @@ function playHat(accented) {
 }
 
 function playCrash() {
+  updateTelemetry(0, 0.38, "High-pass noise");
   crashSound.amp(0.38, 0.003);
 
   scheduleEnvelope(function() {
@@ -413,6 +505,7 @@ function playCrash() {
 
 function playBass(midi) {
   let frequency = midiToFrequency(midi);
+  updateTelemetry(frequency, 0.42, "Triangle bass");
 
   bassSound.freq(frequency, 0.08);
   bassSound.amp(0.42, 0.08);
@@ -424,6 +517,7 @@ function playBass(midi) {
 
 function playSax(midi) {
   let frequency = midiToFrequency(midi);
+  updateTelemetry(frequency, 0.13, "Sawtooth sax");
 
   saxSound.freq(frequency, 0.12);
   saxSound.amp(0.13, 0.10);
@@ -435,6 +529,7 @@ function playSax(midi) {
 
 function playGuitar(midi) {
   let frequency = midiToFrequency(midi);
+  updateTelemetry(frequency, 0.10, "Triangle guitar");
 
   guitarSound.freq(frequency);
   guitarSound.amp(0.10, 0.02);
@@ -446,6 +541,7 @@ function playGuitar(midi) {
 
 function playTube(midi) {
   let frequency = midiToFrequency(midi);
+  updateTelemetry(frequency, 0.12, "Sine tube");
 
   tubeSound.freq(frequency);
   tubeSound.amp(0.12, 0.05);
@@ -457,6 +553,7 @@ function playTube(midi) {
 
 function playSubBass(midi) {
   let frequency = midiToFrequency(midi);
+  updateTelemetry(frequency, 0.35, "Sine sub-bass");
 
   subBassSound.freq(frequency);
   subBassSound.amp(0.35, 0.01);
@@ -470,10 +567,23 @@ function midiToFrequency(midi) {
   return 440 * Math.pow(2, (midi - 69) / 12);
 }
 
+function startEverything() {
+  kickSound.start();
+  snareSound.start();
+  hatSound.start();
+  crashSound.start();
+  bassSound.start();
+  saxSound.start();
+  guitarSound.start();
+  tubeSound.start();
+  subBassSound.start();
+}
+
 function mousePressed() {
   userStartAudio();
 
   if (!playing) {
+    startEverything();
     playing = true;
     currentStep = 0;
     currentBar = 0;
@@ -501,6 +611,16 @@ function stopEverything() {
   guitarSound.amp(0);
   tubeSound.amp(0);
   subBassSound.amp(0);
+
+  kickSound.stop();
+  snareSound.stop();
+  hatSound.stop();
+  crashSound.stop();
+  bassSound.stop();
+  saxSound.stop();
+  guitarSound.stop();
+  tubeSound.stop();
+  subBassSound.stop();
 }
 </script>
 </body>
