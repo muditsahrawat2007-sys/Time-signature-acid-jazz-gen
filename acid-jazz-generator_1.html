@@ -9,20 +9,81 @@
     padding: 0;
     background: #121212;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
   }
   canvas {
     display: block;
+    border-radius: 8px;
+  }
+  #controls {
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  #controls label {
+    color: #aaa;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+  }
+  #timeSigSelect {
+    background: #1e1e1e;
+    color: #e8e8e8;
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 14px;
+    outline: none;
+    cursor: pointer;
+  }
+  #timeSigSelect:hover {
+    border-color: #555;
+  }
+  #errorBox {
+    display: none;
+    color: #ff6b6b;
+    font-size: 12px;
+    max-width: 700px;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+  #ideasBox {
+    width: min(700px, calc(100% - 24px));
+    margin-top: 28px;
+    padding: 24px;
+    color: #d8d8d8;
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-top: 3px solid #73c8b6;
+    line-height: 1.6;
+  }
+  #ideasBox h2 {
+    margin: 0 0 12px;
+    color: #e8e8e8;
+    font-size: 28px;
+  }
+  #ideasBox p {
+    margin: 0;
   }
 </style>
-<!-- p5.js core library -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.13/p5.min.js"></script>
-<!-- p5.sound library, needed for Oscillator / Noise / HighPass -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.13/addons/p5.sound.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.13/p5.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.13/addons/p5.sound.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
+
+<div id="errorBox"></div>
+<div id="controls">
+  <label for="timeSigSelect">TIME SIGNATURE</label>
+  <select id="timeSigSelect"></select>
+</div>
+<section id="ideasBox" aria-label="Ideas">
+  <h2>Ideas</h2>
+  <p>Time signatures tells us how beats in music are organised, i use different time signatures to change the groove and rhythmic feel rather than limiting the piece to only 4/4 as it gives a regular four beat groove, while 3/4 creates a three beat feeling, the other time signatures help make the beat feel more fresh and unpredictable, so have fun exploring! The kick drum follows the current time signature chosen by the user ad places its hit with the beats of each bar while the other elements like the snare, crash, high hat, sax build around it and create a jazzy groove</p>
+</section>
 
 <script>
 let kickSound;
@@ -37,6 +98,8 @@ let guitarSound;
 let tubeSound;
 let subBassSound;
 
+let fft;
+
 let playing = false;
 
 let currentStep = 0;
@@ -48,8 +111,7 @@ let lastStepTime = 0;
 const bpm = 96;
 const stepTime = (60000 / bpm) / 4;
 
-
-const swingAmount = 0.14; // 0 = straight, ~0.3 = heavy triplet swing
+const swingAmount = 0.14;
 
 function getStepDuration(step) {
   if (step % 2 === 1) {
@@ -57,6 +119,64 @@ function getStepDuration(step) {
   } else {
     return stepTime * (1 - swingAmount);
   }
+}
+
+const timeSignatures = {
+  "4/4":  [4, 4],
+  "3/4":  [3, 4],
+  "5/4":  [5, 4],
+  "7/4":  [7, 4],
+  "6/8":  [6, 8],
+  "7/8":  [7, 8],
+  "9/8":  [9, 8],
+  "11/8": [11, 8],
+  "4/3":  [4, 3],
+  "9/10": [9, 10]
+};
+
+let currentSig = "4/4";
+let stepsPerBar = 16;
+
+function computeStepsPerBar(sig) {
+  const [n, d] = timeSignatures[sig];
+  return Math.max(4, Math.round(16 * n / d));
+}
+
+window.addEventListener("error", function(e) {
+  console.error("Runtime error:", e.message, "at", e.filename + ":" + e.lineno);
+  const box = document.getElementById("errorBox");
+  if (box) {
+    box.textContent = "Error: " + e.message;
+    box.style.display = "block";
+  }
+});
+
+function setupTimeSignatureSelect() {
+  const select = document.getElementById("timeSigSelect");
+  if (!select) return;
+
+  Object.keys(timeSignatures).forEach(function(sig) {
+    const opt = document.createElement("option");
+    opt.value = sig;
+    opt.textContent = sig;
+    if (sig === currentSig) opt.selected = true;
+    select.appendChild(opt);
+  });
+
+  stepsPerBar = computeStepsPerBar(currentSig);
+
+  select.addEventListener("change", function(e) {
+    currentSig = e.target.value;
+    stepsPerBar = computeStepsPerBar(currentSig);
+    currentStep = currentStep % stepsPerBar;
+    currentBar = 0;
+  });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", setupTimeSignatureSelect);
+} else {
+  setupTimeSignatureSelect();
 }
 
 const kickA = [
@@ -87,7 +207,7 @@ const hatPattern = [
   1,0,1,0
 ];
 
-const crashChance = 0.3; // 30% chance on beats 2/3/4
+const crashChance = 0.3;
 
 const bassA = [
   36,36,36,36,
@@ -103,7 +223,6 @@ const bassB = [
   38,38,36,36
 ];
 
-// More connected melody
 const saxA = [
   64,64,67,67,
   69,69,71,71,
@@ -119,8 +238,8 @@ const saxB = [
 ];
 
 function setup() {
-  createCanvas(700,350);
-  textAlign(CENTER,CENTER);
+  const canvas = createCanvas(700, 490);
+  textAlign(CENTER, CENTER);
 
   kickSound = new p5.Oscillator("sine");
   snareSound = new p5.Noise("white");
@@ -160,32 +279,40 @@ function setup() {
   guitarSound.amp(0);
   tubeSound.amp(0);
   subBassSound.amp(0);
+
+  try {
+    fft = new p5.FFT(0.75, 512);
+  } catch (err) {
+    console.error("FFT init failed, visualizer will be skipped:", err);
+    fft = null;
+  }
 }
 
 function draw() {
   background(18);
-  fill(255);
-  textSize(30);
 
-  text(
-    "Smooth Acid Jazz Generator",
-    width/2,
-    60
-  );
-
-  textSize(20);
-
-  if (playing) {
-    text("PLAYING", width/2, 120);
-  } else {
-    text("CLICK TO PLAY", width/2, 120);
+  try {
+    drawVisualizer();
+  } catch (err) {
+    console.error("Visualizer draw failed, skipping this frame:", err);
   }
 
-  text("Part " + (currentPart + 1), width/2, 165);
-  text("Bar " + (currentBar + 1), width/2, 200);
+  fill(255);
+  textSize(28);
+  text("Smooth Acid Jazz Generator", width / 2, 195);
 
-  textSize(16);
-  text("96 BPM • Smooth Groove", width/2, 270);
+  textSize(18);
+  if (playing) {
+    text("PLAYING", width / 2, 245);
+  } else {
+    text("CLICK ANYWHERE ON THE CANVAS TO PLAY", width / 2, 245);
+  }
+
+  text("Part " + (currentPart + 1), width / 2, 285);
+  text("Bar " + (currentBar + 1) + " / 4", width / 2, 315);
+
+  textSize(15);
+  text("96 BPM • Time Signature: " + currentSig + " (" + stepsPerBar + " steps/bar)", width / 2, 350);
 
   if (!playing) {
     return;
@@ -196,7 +323,7 @@ function draw() {
     playCurrentStep();
     currentStep++;
 
-    if (currentStep >= 16) {
+    if (currentStep >= stepsPerBar) {
       currentStep = 0;
       currentBar++;
 
@@ -211,6 +338,52 @@ function draw() {
       }
     }
   }
+}
+
+function drawVisualizer() {
+  push();
+  noStroke();
+  fill(10);
+  rect(0, 0, width, 150);
+
+  if (!fft) {
+    pop();
+    return;
+  }
+
+  const spectrum = fft.analyze();
+  const wave = fft.waveform();
+
+  const bins = 64;
+  const bandStep = floor(spectrum.length / bins);
+  const barW = width / bins;
+
+  colorMode(HSB, 360, 100, 100, 100);
+  for (let i = 0; i < bins; i++) {
+    const idx = i * bandStep;
+    const amp = spectrum[idx];
+    const h = map(amp, 0, 255, 0, 95);
+    const hue = map(i, 0, bins, 150, 320);
+    fill(hue, 75, 90, 85);
+    rect(i * barW, 100 - h, barW - 1, h);
+  }
+  colorMode(RGB, 255);
+
+  stroke(90, 240, 200);
+  strokeWeight(1.5);
+  noFill();
+  beginShape();
+  for (let i = 0; i < wave.length; i += 4) {
+    const x = map(i, 0, wave.length, 0, width);
+    const y = 128 + map(wave[i], -1, 1, -18, 18);
+    vertex(x, y);
+  }
+  endShape();
+
+  stroke(50);
+  strokeWeight(1);
+  line(0, 150, width, 150);
+  pop();
 }
 
 function playCurrentStep() {
@@ -228,42 +401,50 @@ function playCurrentStep() {
     melodyPattern = saxB;
   }
 
-  // KICK
-  if (kickPattern[currentStep] === 1) {
+  const patternStep = currentStep % 16;
+
+  if (kickPattern[patternStep] === 1) {
     playKick();
-    playSubBass(bassPattern[currentStep] - 12);
+    playSubBass(bassPattern[patternStep] - 12);
   }
 
-  if (snarePattern[currentStep] === 1) {
+  if (snarePattern[patternStep] === 1) {
     playSnare();
   }
 
-  if (hatPattern[currentStep] === 1) {
-    playHat(currentStep % 4 === 0);
+  if (hatPattern[patternStep] === 1) {
+    playHat(patternStep % 4 === 0);
   }
 
-  if (currentStep === 0) {
+  if (patternStep === 0) {
     playCrash();
-  } else if (
-    currentStep === 4 ||
-    currentStep === 8 ||
-    currentStep === 12
-  ) {
+  } else if (patternStep % 4 === 0) {
     if (random() < crashChance) {
       playCrash();
     }
   }
 
-  playBass(bassPattern[currentStep]);
-  playSax(melodyPattern[currentStep]);
+  playBass(bassPattern[patternStep]);
+  playSax(melodyPattern[patternStep]);
 
-  if (currentStep === 3 || currentStep === 11) {
+  if (patternStep === 3 || patternStep === 11) {
     playGuitar(52);
   }
 
-  if (currentStep === 7 || currentStep === 15) {
+  if (patternStep === 7 || patternStep === 15) {
     playTube(48);
   }
+}
+
+let pendingTimeouts = [];
+
+function scheduleTimeout(fn, delay) {
+  const id = setTimeout(function() {
+    pendingTimeouts = pendingTimeouts.filter(function(t) { return t !== id; });
+    fn();
+  }, delay);
+  pendingTimeouts.push(id);
+  return id;
 }
 
 function playKick() {
@@ -271,7 +452,7 @@ function playKick() {
   kickSound.amp(0.65, 0.01);
   kickSound.freq(45, 0.18);
 
-  setTimeout(function() {
+  scheduleTimeout(function() {
     kickSound.amp(0, 0.20);
   }, 180);
 }
@@ -279,16 +460,16 @@ function playKick() {
 function playSnare() {
   snareSound.amp(0.22, 0.005);
 
-  setTimeout(function() {
+  scheduleTimeout(function() {
     snareSound.amp(0, 0.12);
   }, 80);
 }
 
 function playHat(accented) {
-  let level = accented ? 0.10 : 0.05;
+  const level = accented ? 0.10 : 0.05;
   hatSound.amp(level, 0.002);
 
-  setTimeout(function() {
+  scheduleTimeout(function() {
     hatSound.amp(0, 0.05);
   }, 35);
 }
@@ -296,62 +477,62 @@ function playHat(accented) {
 function playCrash() {
   crashSound.amp(0.38, 0.003);
 
-  setTimeout(function() {
+  scheduleTimeout(function() {
     crashSound.amp(0, 1.1);
   }, 140);
 }
 
 function playBass(midi) {
-  let frequency = midiToFrequency(midi);
+  const frequency = midiToFrequency(midi);
 
   bassSound.freq(frequency, 0.08);
   bassSound.amp(0.42, 0.08);
 
-  setTimeout(function() {
+  scheduleTimeout(function() {
     bassSound.amp(0.30, 0.15);
   }, 250);
 }
 
 function playSax(midi) {
-  let frequency = midiToFrequency(midi);
+  const frequency = midiToFrequency(midi);
 
   saxSound.freq(frequency, 0.12);
   saxSound.amp(0.13, 0.10);
 
-  setTimeout(function() {
+  scheduleTimeout(function() {
     saxSound.amp(0.10, 0.15);
   }, 250);
 }
 
 function playGuitar(midi) {
-  let frequency = midiToFrequency(midi);
+  const frequency = midiToFrequency(midi);
 
   guitarSound.freq(frequency);
   guitarSound.amp(0.10, 0.02);
 
-  setTimeout(function() {
+  scheduleTimeout(function() {
     guitarSound.amp(0, 0.30);
   }, 180);
 }
 
 function playTube(midi) {
-  let frequency = midiToFrequency(midi);
+  const frequency = midiToFrequency(midi);
 
   tubeSound.freq(frequency);
   tubeSound.amp(0.12, 0.05);
 
-  setTimeout(function() {
+  scheduleTimeout(function() {
     tubeSound.amp(0, 0.35);
   }, 250);
 }
 
 function playSubBass(midi) {
-  let frequency = midiToFrequency(midi);
+  const frequency = midiToFrequency(midi);
 
   subBassSound.freq(frequency);
   subBassSound.amp(0.35, 0.01);
 
-  setTimeout(function() {
+  scheduleTimeout(function() {
     subBassSound.amp(0, 0.20);
   }, 190);
 }
@@ -360,7 +541,11 @@ function midiToFrequency(midi) {
   return 440 * Math.pow(2, (midi - 69) / 12);
 }
 
-function mousePressed() {
+function mousePressed(event) {
+  if (event && event.target && event.target.tagName !== "CANVAS") {
+    return;
+  }
+
   userStartAudio();
 
   if (!playing) {
@@ -376,20 +561,23 @@ function mousePressed() {
   }
 }
 
-// =========================
-// STOP
-// =========================
-
 function stopEverything() {
-  kickSound.amp(0);
-  snareSound.amp(0);
-  hatSound.amp(0);
-  crashSound.amp(0);
-  bassSound.amp(0);
-  saxSound.amp(0);
-  guitarSound.amp(0);
-  tubeSound.amp(0);
-  subBassSound.amp(0); // fixed: was "trumpetSound" (undefined) in the original
+  pendingTimeouts.forEach(function(id) { clearTimeout(id); });
+  pendingTimeouts = [];
+
+  const now = getAudioContext().currentTime;
+  const sounds = [
+    kickSound, snareSound, hatSound, crashSound,
+    bassSound, saxSound, guitarSound, tubeSound, subBassSound
+  ];
+
+  sounds.forEach(function(s) {
+    if (s && s.output && s.output.gain) {
+      s.output.gain.cancelScheduledValues(now);
+      s.output.gain.setValueAtTime(0, now);
+    }
+    s.amp(0);
+  });
 }
 </script>
 </body>
