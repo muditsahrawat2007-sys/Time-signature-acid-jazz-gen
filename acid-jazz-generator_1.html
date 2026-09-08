@@ -98,6 +98,8 @@ let guitarSound;
 let tubeSound;
 let subBassSound;
 
+let tablaSounds = {};
+
 let fft;
 
 let playing = false;
@@ -207,6 +209,20 @@ const hatPattern = [
   1,0,1,0
 ];
 
+const tablaGrooveA = [
+  "dha", null, "tin", "na",
+  "dhin", null, "kat", "tin",
+  "dha", "re", "tin", null,
+  "dhec", null, "tak", "tin"
+];
+
+const tablaGrooveB = [
+  "dha", null, "tin", "kat",
+  null, "dhin", "tin", "tak",
+  "dha", "re", null, "tin",
+  "dhe", "kat", "tak", "tin"
+];
+
 const crashChance = 0.3;
 
 const bassA = [
@@ -236,6 +252,17 @@ const saxB = [
   71,71,69,69,
   67,67,64,64
 ];
+
+function preload() {
+  const tablaStrokes = [
+    "dha", "dhe", "dhec", "dhen", "dhin", "dhun", "ga", "kat",
+    "na", "ne", "re", "tak", "tin", "tit", "tun"
+  ];
+
+  tablaStrokes.forEach(function(stroke) {
+    tablaSounds[stroke] = loadSound("tabla-ajaysm/" + stroke + ".mp3");
+  });
+}
 
 function setup() {
   const canvas = createCanvas(700, 490);
@@ -402,6 +429,11 @@ function playCurrentStep() {
   }
 
   const patternStep = currentStep % 16;
+  const tablaPattern = currentPart === 0 ? tablaGrooveA : tablaGrooveB;
+
+  if (tablaPattern[patternStep]) {
+    playTabla(tablaPattern[patternStep], patternStep % 4 === 0 ? 0.42 : 0.24);
+  }
 
   if (kickPattern[patternStep] === 1) {
     playKick();
@@ -448,38 +480,27 @@ function scheduleTimeout(fn, delay) {
 }
 
 function playKick() {
-  kickSound.freq(110);
-  kickSound.amp(0.65, 0.01);
-  kickSound.freq(45, 0.18);
-
-  scheduleTimeout(function() {
-    kickSound.amp(0, 0.20);
-  }, 180);
+  playTabla("dha", 0.65);
 }
 
 function playSnare() {
-  snareSound.amp(0.22, 0.005);
-
-  scheduleTimeout(function() {
-    snareSound.amp(0, 0.12);
-  }, 80);
+  playTabla("dhe", 0.55);
 }
 
 function playHat(accented) {
   const level = accented ? 0.10 : 0.05;
-  hatSound.amp(level, 0.002);
-
-  scheduleTimeout(function() {
-    hatSound.amp(0, 0.05);
-  }, 35);
+  playTabla("tin", level);
 }
 
 function playCrash() {
-  crashSound.amp(0.38, 0.003);
+  playTabla("dhun", 0.45);
+}
 
-  scheduleTimeout(function() {
-    crashSound.amp(0, 1.1);
-  }, 140);
+function playTabla(stroke, level) {
+  const sample = tablaSounds[stroke];
+  if (sample && sample.isLoaded()) {
+    sample.play(0, 1, level);
+  }
 }
 
 function playBass(midi) {

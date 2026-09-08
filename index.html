@@ -42,10 +42,30 @@
   h1 { font: 500 clamp(3rem, 7vw, 6.7rem)/0.88 "Fraunces", serif; letter-spacing: 0; max-width: 720px; margin: 0; }
   .intro { color: var(--muted); font-size: 16px; line-height: 1.55; max-width: 285px; margin: 0 0 5px; }
   .console { background: var(--surface); border: 1px solid var(--line); padding: clamp(14px, 3vw, 24px); box-shadow: 0 24px 80px rgba(0, 0, 0, 0.26); }
-  .console-controls { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 14px; }
+  .console-controls { display: flex; align-items: end; justify-content: space-between; gap: 18px; margin-bottom: 14px; flex-wrap: wrap; }
   .console-controls label { color: var(--muted); font: 500 11px "DM Mono", monospace; letter-spacing: 0.08em; }
   #timeSigSelect { background: #121918; color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; font: 12px "DM Mono", monospace; cursor: pointer; }
   #timeSigSelect:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .transport { display: flex; gap: 8px; }
+  .transport button { border: 1px solid var(--line); border-radius: 3px; padding: 10px 18px; color: var(--ink); background: #25302d; font: 500 11px "DM Mono", monospace; letter-spacing: 0.08em; cursor: pointer; }
+  .transport button:first-child { background: var(--accent); border-color: var(--accent); color: #18201e; }
+  .transport button:hover:not(:disabled), .transport button:focus-visible { border-color: var(--accent); outline: none; }
+  .transport button:disabled { cursor: default; opacity: 0.42; }
+  .knob-bank { display: flex; align-items: end; gap: 14px; }
+  .knob-control { display: grid; gap: 5px; min-width: 72px; }
+  .knob-control output { color: var(--accent); font: 10px "DM Mono", monospace; text-align: center; }
+  .knob-control input { width: 72px; accent-color: var(--accent); cursor: pointer; }
+  .knob-control input[type="range"] { appearance: none; height: 18px; background: transparent; }
+  .knob-control input[type="range"]::-webkit-slider-runnable-track { height: 4px; background: #394640; border-radius: 3px; }
+  .knob-control input[type="range"]::-webkit-slider-thumb { appearance: none; width: 16px; height: 16px; margin-top: -6px; border: 2px solid #18201e; border-radius: 50%; background: var(--accent); }
+  .knob-control input[type="range"]::-moz-range-track { height: 4px; background: #394640; border-radius: 3px; }
+  .knob-control input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border: 2px solid #18201e; border-radius: 50%; background: var(--accent); }
+  .synth-meter { background: #121918; border: 1px solid var(--line); padding: 12px 14px 14px; margin-bottom: 14px; }
+  .meter-head { display: flex; justify-content: space-between; color: var(--muted); font: 10px "DM Mono", monospace; letter-spacing: 0.08em; }
+  #playState { color: var(--accent); }
+  .level-bars { display: flex; align-items: end; gap: 5px; height: 58px; margin-top: 10px; }
+  .level-bars i { flex: 1; min-width: 5px; height: 8%; background: var(--teal); transition: height 90ms linear, background-color 120ms linear; }
+  .level-bars i:nth-child(4n + 1) { background: var(--coral); }
   .telemetry { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); margin-bottom: 14px; }
   .telemetry div { background: #18201e; padding: 10px 12px; min-width: 0; }
   .telemetry span { display: block; color: var(--muted); font: 10px "DM Mono", monospace; letter-spacing: 0.06em; text-transform: uppercase; }
@@ -56,7 +76,7 @@
     width: 100% !important;
     height: auto !important;
     border-radius: 8px;
-    cursor: pointer;
+    cursor: default;
   }
 
   #sketch { min-height: 350px; position: relative; background: #121212; border-radius: 8px; overflow: hidden; }
@@ -87,7 +107,9 @@
     header { align-items: start; flex-direction: column; gap: 20px; margin-bottom: 25px; }
     .intro { max-width: 360px; }
     .console { padding: 8px; }
-    .console-controls { align-items: flex-start; flex-direction: column; }
+    .console-controls { align-items: stretch; flex-direction: column; }
+    .knob-bank { justify-content: space-between; }
+    .knob-control, .knob-control input { min-width: 0; width: 100%; }
     .telemetry { grid-template-columns: repeat(2, 1fr); }
     .lesson { grid-template-columns: 1fr; margin-top: 25px; }
     .lesson article { min-height: 0; }
@@ -113,8 +135,27 @@
   </header>
   <section class="console" aria-label="Acid jazz music player">
     <div class="console-controls">
-      <label for="timeSigSelect">TIME SIGNATURE</label>
-      <select id="timeSigSelect" aria-label="Choose time signature"></select>
+      <div class="transport" role="group" aria-label="Playback controls">
+        <button id="startButton" type="button">START</button>
+        <button id="stopButton" type="button" disabled>STOP</button>
+      </div>
+      <div class="knob-bank" aria-label="Groove controls">
+        <label class="knob-control" for="volumeControl">VOLUME
+          <input id="volumeControl" type="range" min="0" max="1" step="0.01" value="0.75">
+          <output id="volumeValue" for="volumeControl">75%</output>
+        </label>
+        <label class="knob-control" for="tempoControl">TEMPO
+          <input id="tempoControl" type="range" min="72" max="132" step="1" value="96">
+          <output id="tempoValue" for="tempoControl">96 BPM</output>
+        </label>
+        <label class="knob-control" for="swingControl">SWING
+          <input id="swingControl" type="range" min="0" max="0.3" step="0.01" value="0.14">
+          <output id="swingValue" for="swingControl">14%</output>
+        </label>
+      </div>
+      <label for="timeSigSelect">TIME SIGNATURE
+        <select id="timeSigSelect" aria-label="Choose time signature"></select>
+      </label>
     </div>
     <div class="telemetry" aria-label="Live sound properties">
       <div><span>Frequency</span><strong id="frequencyValue">-- Hz</strong></div>
@@ -122,8 +163,14 @@
       <div><span>Timbre</span><strong id="timbreValue">Waiting</strong></div>
       <div><span>Bar length</span><strong id="barLengthValue">16 steps</strong></div>
     </div>
+    <div class="synth-meter" aria-label="Live synth level meter">
+      <div class="meter-head"><span>LIVE SYNTH / TABLA SIGNAL</span><span id="playState">STOPPED</span></div>
+      <div class="level-bars" aria-hidden="true">
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+      </div>
+    </div>
     <div id="sketch"><div id="sketch-status">Loading audio console...</div></div>
-    <p class="hint">Click the console to start or stop the groove · 96 BPM · swing feel</p>
+    <p class="hint">Use Start and Stop to control the groove · shape the feel with the mixer</p>
   </section>
   <section class="lesson" aria-label="Time signature explanation">
     <article>
@@ -166,6 +213,8 @@ let guitarSound;
 let tubeSound;
 let subBassSound;
 
+let tablaSounds = {};
+
 let playing = false;
 let pendingTimeouts = [];
 
@@ -175,10 +224,9 @@ let currentPart = 0;
 
 let lastStepTime = 0;
 
-const bpm = 96;
-const stepTime = (60000 / bpm) / 4;
+let bpm = 96;
 
-const swingAmount = 0.14;
+let swingAmount = 0.14;
 
 const timeSignatures = {
   "4/4": [4, 4],
@@ -218,6 +266,20 @@ function renderTelemetry() {
   document.getElementById("barLengthValue").textContent = stepsPerBar + " steps";
 }
 
+function renderLevelBars() {
+  const bars = document.querySelectorAll(".level-bars i");
+  const state = document.getElementById("playState");
+  const energy = playing ? Math.max(0.12, soundTelemetry.amplitude) : 0.03;
+
+  bars.forEach(function(bar, index) {
+    const pulse = playing ? Math.abs(Math.sin((millis() / 105) + index * 0.8)) : 0;
+    const height = Math.min(100, 8 + (energy * 72) + (pulse * 22));
+    bar.style.height = height + "%";
+  });
+
+  state.textContent = playing ? "PLAYING" : "STOPPED";
+}
+
 function computeStepsPerBar(signature) {
   const [beats, noteValue] = timeSignatures[signature];
   return Math.max(1, Math.round(16 * beats / noteValue));
@@ -243,7 +305,35 @@ function setupTimeSignatureSelect() {
   });
 }
 
+function setupTransportControls() {
+  const startButton = document.getElementById("startButton");
+  const stopButton = document.getElementById("stopButton");
+  const volumeControl = document.getElementById("volumeControl");
+  const tempoControl = document.getElementById("tempoControl");
+  const swingControl = document.getElementById("swingControl");
+
+  volumeControl.addEventListener("input", function(event) {
+    const level = Number(event.target.value);
+    masterVolume(level, 0.02);
+    document.getElementById("volumeValue").textContent = Math.round(level * 100) + "%";
+  });
+
+  tempoControl.addEventListener("input", function(event) {
+    bpm = Number(event.target.value);
+    document.getElementById("tempoValue").textContent = bpm + " BPM";
+  });
+
+  swingControl.addEventListener("input", function(event) {
+    swingAmount = Number(event.target.value);
+    document.getElementById("swingValue").textContent = Math.round(swingAmount * 100) + "%";
+  });
+
+  startButton.addEventListener("click", startPlayback);
+  stopButton.addEventListener("click", stopPlayback);
+}
+
 setupTimeSignatureSelect();
+setupTransportControls();
 renderTelemetry();
 
 function scheduleEnvelope(callback, delay) {
@@ -258,9 +348,9 @@ function scheduleEnvelope(callback, delay) {
 
 function getStepDuration(step) {
   if (step % 2 === 1) {
-    return stepTime * (1 + swingAmount);
+    return ((60000 / bpm) / 4) * (1 + swingAmount);
   } else {
-    return stepTime * (1 - swingAmount);
+    return ((60000 / bpm) / 4) * (1 - swingAmount);
   }
 }
 
@@ -292,6 +382,20 @@ const hatPattern = [
   1,0,1,0
 ];
 
+const tablaGrooveA = [
+  "dha", null, "tin", "na",
+  "dhin", null, "kat", "tin",
+  "dha", "re", "tin", null,
+  "dhec", null, "tak", "tin"
+];
+
+const tablaGrooveB = [
+  "dha", null, "tin", "kat",
+  null, "dhin", "tin", "tak",
+  "dha", "re", null, "tin",
+  "dhe", "kat", "tak", "tin"
+];
+
 const crashChance = 0.3;
 
 const bassA = [
@@ -321,6 +425,17 @@ const saxB = [
   71,71,69,69,
   67,67,64,64
 ];
+
+function preload() {
+  const tablaStrokes = [
+    "dha", "dhe", "dhec", "dhen", "dhin", "dhun", "ga", "kat",
+    "na", "ne", "re", "tak", "tin", "tit", "tun"
+  ];
+
+  tablaStrokes.forEach(function(stroke) {
+    tablaSounds[stroke] = loadSound("tabla-ajaysm/" + stroke + ".mp3");
+  });
+}
 
 function setup() {
   const canvas = createCanvas(700,350);
@@ -370,6 +485,7 @@ function setup() {
 
 function draw() {
   background(18);
+  renderLevelBars();
   fill(255);
   textSize(30);
 
@@ -431,6 +547,11 @@ function playCurrentStep() {
   }
 
   const patternStep = currentStep % 16;
+  const tablaPattern = currentPart === 0 ? tablaGrooveA : tablaGrooveB;
+
+  if (tablaPattern[patternStep]) {
+    playTabla(tablaPattern[patternStep], patternStep % 4 === 0 ? 0.42 : 0.24);
+  }
 
   if (kickPattern[patternStep] === 1) {
     playKick();
@@ -470,42 +591,31 @@ function playCurrentStep() {
 }
 
 function playKick() {
-  updateTelemetry(45, 0.65, "Sine kick");
-  kickSound.freq(110);
-  kickSound.amp(0.65, 0.01);
-  kickSound.freq(45, 0.18);
-
-  scheduleEnvelope(function() {
-    kickSound.amp(0, 0.20);
-  }, 180);
+  updateTelemetry(45, 0.65, "Tabla dha");
+  playTabla("dha", 0.65);
 }
 
 function playSnare() {
-  updateTelemetry(0, 0.22, "White noise");
-  snareSound.amp(0.22, 0.005);
-
-  scheduleEnvelope(function() {
-    snareSound.amp(0, 0.12);
-  }, 80);
+  updateTelemetry(0, 0.22, "Tabla dhe");
+  playTabla("dhe", 0.55);
 }
 
 function playHat(accented) {
   let level = accented ? 0.10 : 0.05;
-  updateTelemetry(0, level, "White noise");
-  hatSound.amp(level, 0.002);
-
-  scheduleEnvelope(function() {
-    hatSound.amp(0, 0.05);
-  }, 35);
+  updateTelemetry(0, level, "Tabla tin");
+  playTabla("tin", level);
 }
 
 function playCrash() {
-  updateTelemetry(0, 0.38, "High-pass noise");
-  crashSound.amp(0.38, 0.003);
+  updateTelemetry(0, 0.38, "Tabla dhun");
+  playTabla("dhun", 0.45);
+}
 
-  scheduleEnvelope(function() {
-    crashSound.amp(0, 1.1);
-  }, 140);
+function playTabla(stroke, level) {
+  const sample = tablaSounds[stroke];
+  if (sample && sample.isLoaded()) {
+    sample.play(0, 1, level);
+  }
 }
 
 function playBass(midi) {
@@ -584,21 +694,28 @@ function startEverything() {
   subBassSound.start();
 }
 
-function mousePressed() {
+function startPlayback() {
   userStartAudio();
 
-  if (!playing) {
-    startEverything();
-    playing = true;
-    currentStep = 0;
-    currentBar = 0;
-    currentPart = 0;
-    lastStepTime = millis();
-    playCurrentStep();
-  } else {
-    playing = false;
-    stopEverything();
-  }
+  if (playing) return;
+
+  startEverything();
+  playing = true;
+  currentStep = 0;
+  currentBar = 0;
+  currentPart = 0;
+  lastStepTime = millis();
+  document.getElementById("startButton").disabled = true;
+  document.getElementById("stopButton").disabled = false;
+  playCurrentStep();
+}
+
+function stopPlayback() {
+  if (!playing) return;
+  playing = false;
+  stopEverything();
+  document.getElementById("startButton").disabled = false;
+  document.getElementById("stopButton").disabled = true;
 }
 
 function stopEverything() {
