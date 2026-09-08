@@ -24,7 +24,13 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-wrap: wrap;
   }
+  #transport { display: flex; gap: 8px; }
+  #transport button { border: 1px solid #444; border-radius: 5px; padding: 8px 16px; color: #eee; background: #292929; font: 600 12px 'Helvetica Neue', Arial, sans-serif; letter-spacing: 0.08em; cursor: pointer; }
+  #transport button:first-child { background: #73c8b6; border-color: #73c8b6; color: #121212; }
+  #transport button:hover:not(:disabled), #transport button:focus-visible { border-color: #e3f26b; outline: none; }
+  #transport button:disabled { cursor: default; opacity: 0.45; }
   #controls label {
     color: #aaa;
     font-size: 13px;
@@ -77,6 +83,10 @@
 
 <div id="errorBox"></div>
 <div id="controls">
+  <div id="transport" role="group" aria-label="Playback controls">
+    <button id="startButton" type="button">START</button>
+    <button id="stopButton" type="button" disabled>STOP</button>
+  </div>
   <label for="timeSigSelect">TIME SIGNATURE</label>
   <select id="timeSigSelect"></select>
 </div>
@@ -173,6 +183,9 @@ function setupTimeSignatureSelect() {
     currentStep = currentStep % stepsPerBar;
     currentBar = 0;
   });
+
+  document.getElementById("startButton").addEventListener("click", startPlayback);
+  document.getElementById("stopButton").addEventListener("click", stopPlayback);
 }
 
 if (document.readyState === "loading") {
@@ -562,24 +575,27 @@ function midiToFrequency(midi) {
   return 440 * Math.pow(2, (midi - 69) / 12);
 }
 
-function mousePressed(event) {
-  if (event && event.target && event.target.tagName !== "CANVAS") {
-    return;
-  }
-
+function startPlayback() {
   userStartAudio();
 
-  if (!playing) {
-    playing = true;
-    currentStep = 0;
-    currentBar = 0;
-    currentPart = 0;
-    lastStepTime = millis();
-    playCurrentStep();
-  } else {
-    playing = false;
-    stopEverything();
-  }
+  if (playing) return;
+
+  playing = true;
+  currentStep = 0;
+  currentBar = 0;
+  currentPart = 0;
+  lastStepTime = millis();
+  document.getElementById("startButton").disabled = true;
+  document.getElementById("stopButton").disabled = false;
+  playCurrentStep();
+}
+
+function stopPlayback() {
+  if (!playing) return;
+  playing = false;
+  stopEverything();
+  document.getElementById("startButton").disabled = false;
+  document.getElementById("stopButton").disabled = true;
 }
 
 function stopEverything() {
