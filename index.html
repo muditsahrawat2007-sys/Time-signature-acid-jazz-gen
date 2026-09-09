@@ -188,6 +188,34 @@
     .mixer-channels { height: 170px; }
     .channel-meter { height: 90px; }
   }
+
+  /* Beatz: black, red, and grey studio theme */
+  :root {
+    --ink: #e60000;
+    --muted: #b8b8b8;
+    --accent: #ff1a1a;
+    --coral: #e60000;
+    --teal: #ff3030;
+    --surface: #4a4a4a;
+    --line: #707070;
+  }
+  html, body { background: #000; color: #e60000; }
+  body::before { display: none; }
+  header, footer, .intro, .section-label, .meter-head, .arrangement-head, .mixer-title, .hint, article p { color: #e60000; }
+  .console, .lesson article, .arrangement, .mixer, .synth-meter, .telemetry div, .timeline .track-name, .timeline .step, .channel { background: #4a4a4a; border-color: #808080; }
+  .console-controls, .hint, .timeline .track-name { background: #666; border-color: #999; }
+  .telemetry, .telemetry div, .synth-meter { background: #333; }
+  .telemetry span, .channel small, .timeline > span, .arrangement-head, .mixer-title { color: #d00000; }
+  .telemetry strong, .knob-control output, #playState, h1, h2, .channel-name { color: #ff1a1a; }
+  .transport button, #timeSigSelect { color: #ff1a1a; background: #555; border-color: #999; }
+  .transport button:first-child { color: #000; background: #e60000; border-color: #e60000; }
+  .transport button:hover:not(:disabled), .transport button:focus-visible, #timeSigSelect:focus { border-color: #ff1a1a; }
+  .knob-control input[type="range"]::-webkit-slider-runnable-track, .knob-control input[type="range"]::-moz-range-track { background: #999; }
+  .knob-control input[type="range"]::-webkit-slider-thumb, .knob-control input[type="range"]::-moz-range-thumb { background: #e60000; }
+  .timeline .step::after { background: #e60000; }
+  .timeline .step.playhead::before { border-color: #fff; }
+  .channel-meter i, .level-bars i, .channel:nth-child(2) .channel-meter i, .channel:nth-child(3) .channel-meter i { background: #e60000; }
+  .lesson article:first-child, .lesson article:last-child, .lesson article:nth-child(3) { border-top-color: #e60000; }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
