@@ -429,6 +429,13 @@ let currentSig = "4/4";
 let stepsPerBar = 16;
 let selectedInstrument = "all";
 let soloInstrument = false;
+const mixerLevels = {
+  tabla: 0.78,
+  bass: 0.68,
+  subBass: 0.62,
+  melody: 0.55,
+  fx: 0.42
+};
 let soundTelemetry = {
   frequency: 0,
   amplitude: 0,
@@ -597,6 +604,17 @@ function setupPerformanceControls() {
   renderPerformanceStatus();
 }
 
+function setupMixerControls() {
+  const levelMap = ["tabla", "bass", "subBass", "melody", "fx"];
+  const controls = document.querySelectorAll(".canvas-channel input[type=range]");
+
+  controls.forEach(function(control, index) {
+    control.addEventListener("input", function(event) {
+      mixerLevels[levelMap[index]] = Number(event.target.value) / 100;
+    });
+  });
+}
+
 function setupTransportControls() {
   const startButton = document.getElementById("startButton");
   const stopButton = document.getElementById("stopButton");
@@ -628,6 +646,7 @@ function setupTransportControls() {
 setupTimeSignatureSelect();
 setupTransportControls();
 setupPerformanceControls();
+setupMixerControls();
 renderTelemetry();
 
 function scheduleEnvelope(callback, delay) {
@@ -909,7 +928,7 @@ function playCrash() {
 function playTabla(stroke, level) {
   const sample = tablaSounds[stroke];
   if (sample && sample.isLoaded()) {
-    sample.play(0, 1, level);
+    sample.play(0, 1, level * mixerLevels.tabla);
   }
 }
 
@@ -918,10 +937,10 @@ function playBass(midi) {
   updateTelemetry(frequency, 0.42, "Triangle bass");
 
   bassSound.freq(frequency, 0.08);
-  bassSound.amp(0.42, 0.08);
+  bassSound.amp(0.42 * mixerLevels.bass, 0.08);
 
   scheduleEnvelope(function() {
-    bassSound.amp(0.30, 0.15);
+    bassSound.amp(0.30 * mixerLevels.bass, 0.15);
   }, 250);
 }
 
@@ -930,10 +949,10 @@ function playSax(midi) {
   updateTelemetry(frequency, 0.13, "Sawtooth sax");
 
   saxSound.freq(frequency, 0.12);
-  saxSound.amp(0.13, 0.10);
+  saxSound.amp(0.13 * mixerLevels.melody, 0.10);
 
   scheduleEnvelope(function() {
-    saxSound.amp(0.10, 0.15);
+    saxSound.amp(0.10 * mixerLevels.melody, 0.15);
   }, 250);
 }
 
@@ -942,7 +961,7 @@ function playGuitar(midi) {
   updateTelemetry(frequency, 0.10, "Triangle guitar");
 
   guitarSound.freq(frequency);
-  guitarSound.amp(0.10, 0.02);
+  guitarSound.amp(0.10 * mixerLevels.fx, 0.02);
 
   scheduleEnvelope(function() {
     guitarSound.amp(0, 0.30);
@@ -954,7 +973,7 @@ function playTube(midi) {
   updateTelemetry(frequency, 0.12, "Sine tube");
 
   tubeSound.freq(frequency);
-  tubeSound.amp(0.12, 0.05);
+  tubeSound.amp(0.12 * mixerLevels.fx, 0.05);
 
   scheduleEnvelope(function() {
     tubeSound.amp(0, 0.35);
@@ -966,7 +985,7 @@ function playSubBass(midi) {
   updateTelemetry(frequency, 0.35, "Sine sub-bass");
 
   subBassSound.freq(frequency);
-  subBassSound.amp(0.35, 0.01);
+  subBassSound.amp(0.35 * mixerLevels.subBass, 0.01);
 
   scheduleEnvelope(function() {
     subBassSound.amp(0, 0.20);
