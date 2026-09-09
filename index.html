@@ -216,6 +216,39 @@
   .timeline .step.playhead::before { border-color: #fff; }
   .channel-meter i, .level-bars i, .channel:nth-child(2) .channel-meter i, .channel:nth-child(3) .channel-meter i { background: #e60000; }
   .lesson article:first-child, .lesson article:last-child, .lesson article:nth-child(3) { border-top-color: #e60000; }
+  .performance-panel { padding: 14px; background: #333; border-bottom: 1px solid #808080; }
+  .performance-title { display: flex; justify-content: space-between; margin-bottom: 14px; color: #ff1a1a; font: 10px "DM Mono", monospace; letter-spacing: .08em; }
+  .performance-grid { display: grid; gap: 10px; }
+  .performance-field { display: grid; gap: 5px; color: #d00000; font: 10px "DM Mono", monospace; letter-spacing: .05em; }
+  .performance-field select, .performance-field input[type="number"] { width: 100%; min-height: 34px; padding: 7px 9px; color: #ff1a1a; background: #555; border: 1px solid #999; border-radius: 2px; font: 12px "DM Mono", monospace; }
+  .performance-field select:focus, .performance-field input:focus { outline: 2px solid #ff1a1a; outline-offset: 1px; }
+  .solo-control { display: flex; align-items: center; gap: 8px; color: #ff1a1a; font: 10px "DM Mono", monospace; }
+  .solo-control input { accent-color: #e60000; }
+  .selected-status { margin-top: 12px; padding-top: 10px; color: #ff1a1a; border-top: 1px solid #707070; font: 10px "DM Mono", monospace; }
+  #sketch { min-height: 350px; background: #111; border-radius: 0; }
+  #sketch canvas { position: absolute; inset: 0; z-index: 0; }
+  .canvas-mixer { position: absolute; z-index: 1; inset: 18px 24px 22px; display: flex; flex-direction: column; }
+  .canvas-mixer-head { display: flex; justify-content: space-between; align-items: center; color: #ff1a1a; font: 11px "DM Mono", monospace; letter-spacing: .08em; }
+  .canvas-mixer-head strong { font-size: 18px; letter-spacing: 0; }
+  .canvas-mixer-head span:last-child { color: #b8b8b8; font-size: 10px; }
+  .canvas-mixer-channels { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; flex: 1; margin-top: 14px; }
+  .canvas-channel { display: flex; flex-direction: column; align-items: center; min-width: 0; padding: 10px 8px; background: #4a4a4a; border: 1px solid #808080; }
+  .canvas-channel-name { color: #ff1a1a; font: 10px "DM Mono", monospace; writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: .06em; }
+  .canvas-channel-meter { display: flex; align-items: end; justify-content: center; gap: 3px; width: 100%; height: 130px; margin: auto 0 12px; }
+  .canvas-channel-meter i { width: 7px; background: #e60000; }
+  .canvas-channel-meter i:nth-child(1) { height: 35%; }
+  .canvas-channel-meter i:nth-child(2) { height: 70%; }
+  .canvas-channel-meter i:nth-child(3) { height: 52%; }
+  .canvas-channel-meter i:nth-child(4) { height: 88%; }
+  .canvas-channel output { color: #ff1a1a; font: 10px "DM Mono", monospace; }
+  .canvas-channel input { width: 100%; margin-top: 10px; accent-color: #e60000; }
+  @media (max-width: 800px) {
+    .canvas-mixer { inset: 14px 12px 16px; }
+    .canvas-mixer-channels { gap: 5px; }
+    .canvas-channel { padding: 7px 4px; }
+    .canvas-channel-meter { height: 100px; }
+    .canvas-channel-meter i { width: 4px; }
+  }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -274,9 +307,45 @@
       <div class="arrangement">
         <div class="arrangement-head"><span>ARRANGEMENT / 16 STEP GRID</span><span id="barDisplay">BAR 01 / PART A</span></div>
         <div id="timeline" class="timeline" aria-label="Live arrangement timeline"></div>
-        <div id="sketch"><div id="sketch-status">Loading audio engine...</div></div>
+        <div id="sketch">
+          <div id="sketch-status">Loading audio engine...</div>
+          <div class="canvas-mixer" aria-label="Main mixer">
+            <div class="canvas-mixer-head"><strong>BEATZ MIXER</strong><span>LIVE CHANNELS / MASTER OUT</span></div>
+            <div class="canvas-mixer-channels">
+              <div class="canvas-channel"><span class="canvas-channel-name">DRUMS</span><div class="canvas-channel-meter"><i></i><i></i><i></i><i></i></div><output>-06 DB</output><input type="range" min="0" max="100" value="78" aria-label="Drums level"></div>
+              <div class="canvas-channel"><span class="canvas-channel-name">BASS</span><div class="canvas-channel-meter"><i></i><i></i><i></i><i></i></div><output>-10 DB</output><input type="range" min="0" max="100" value="68" aria-label="Bass level"></div>
+              <div class="canvas-channel"><span class="canvas-channel-name">SUB</span><div class="canvas-channel-meter"><i></i><i></i><i></i><i></i></div><output>-12 DB</output><input type="range" min="0" max="100" value="62" aria-label="Sub bass level"></div>
+              <div class="canvas-channel"><span class="canvas-channel-name">SAX</span><div class="canvas-channel-meter"><i></i><i></i><i></i><i></i></div><output>-14 DB</output><input type="range" min="0" max="100" value="55" aria-label="Saxophone level"></div>
+              <div class="canvas-channel"><span class="canvas-channel-name">FX</span><div class="canvas-channel-meter"><i></i><i></i><i></i><i></i></div><output>-18 DB</output><input type="range" min="0" max="100" value="42" aria-label="Effects level"></div>
+            </div>
+          </div>
+        </div>
       </div>
       <aside class="mixer" aria-label="Mixer channels">
+        <div class="performance-panel" aria-label="Performance controls">
+          <div class="performance-title"><span>PERFORM</span><span id="selectedInstrumentStatus">ALL LIVE</span></div>
+          <div class="performance-grid">
+            <label class="performance-field" for="instrumentSelect">PLAY INSTRUMENT
+              <select id="instrumentSelect">
+                <option value="all">All instruments</option>
+                <option value="tabla">Tabla / drums</option>
+                <option value="bass">Bass</option>
+                <option value="subBass">Sub-bass</option>
+                <option value="sax">Saxophone</option>
+                <option value="guitar">Guitar</option>
+                <option value="tube">Tube</option>
+              </select>
+            </label>
+            <label class="performance-field" for="performanceBpm">PERFORMANCE BPM
+              <input id="performanceBpm" type="number" min="72" max="132" step="1" value="96">
+            </label>
+            <label class="performance-field" for="performanceTimeSig">TIME SIGNATURE
+              <select id="performanceTimeSig" aria-label="Performance time signature"></select>
+            </label>
+            <label class="solo-control" for="soloInstrument"><input id="soloInstrument" type="checkbox"> SOLO SELECTED INSTRUMENT</label>
+          </div>
+          <div class="selected-status" id="performanceStatus">All instruments are enabled</div>
+        </div>
         <div class="mixer-title"><span>MIXER</span><span>PEAK</span></div>
         <div class="mixer-channels">
           <div class="channel"><span class="channel-name">DRUMS</span><div class="channel-meter"><i></i><i></i><i></i><i></i></div><small>-06 DB</small></div>
@@ -358,6 +427,8 @@ const timeSignatures = {
 
 let currentSig = "4/4";
 let stepsPerBar = 16;
+let selectedInstrument = "all";
+let soloInstrument = false;
 let soundTelemetry = {
   frequency: 0,
   amplitude: 0,
@@ -439,6 +510,24 @@ function computeStepsPerBar(signature) {
   return Math.max(1, Math.round(16 * beats / noteValue));
 }
 
+function isInstrumentEnabled(instrument) {
+  return !soloInstrument || selectedInstrument === "all" || selectedInstrument === instrument;
+}
+
+function renderPerformanceStatus() {
+  const status = document.getElementById("performanceStatus");
+  const badge = document.getElementById("selectedInstrumentStatus");
+  if (!status || !badge) return;
+
+  const select = document.getElementById("instrumentSelect");
+  const label = select.options[select.selectedIndex].textContent;
+  const liveLabel = soloInstrument && selectedInstrument !== "all" ? "SOLO" : "ALL LIVE";
+  badge.textContent = liveLabel;
+  status.textContent = soloInstrument && selectedInstrument !== "all"
+    ? label + " is live / other instruments muted"
+    : "All instruments are enabled";
+}
+
 function setupTimeSignatureSelect() {
   const select = document.getElementById("timeSigSelect");
 
@@ -455,8 +544,57 @@ function setupTimeSignatureSelect() {
     stepsPerBar = computeStepsPerBar(currentSig);
     currentStep = currentStep % stepsPerBar;
     currentBar = 0;
+    document.getElementById("performanceTimeSig").value = currentSig;
     renderTelemetry();
   });
+}
+
+function setupPerformanceControls() {
+  const instrumentSelect = document.getElementById("instrumentSelect");
+  const performanceBpm = document.getElementById("performanceBpm");
+  const performanceTimeSig = document.getElementById("performanceTimeSig");
+  const soloControl = document.getElementById("soloInstrument");
+  const timeSigSelect = document.getElementById("timeSigSelect");
+  const tempoControl = document.getElementById("tempoControl");
+
+  Object.keys(timeSignatures).forEach(function(signature) {
+    const option = document.createElement("option");
+    option.value = signature;
+    option.textContent = signature;
+    option.selected = signature === currentSig;
+    performanceTimeSig.appendChild(option);
+  });
+
+  instrumentSelect.addEventListener("change", function(event) {
+    selectedInstrument = event.target.value;
+    soloInstrument = selectedInstrument !== "all";
+    soloControl.checked = soloInstrument;
+    renderPerformanceStatus();
+  });
+
+  soloControl.addEventListener("change", function(event) {
+    soloInstrument = event.target.checked;
+    renderPerformanceStatus();
+  });
+
+  performanceBpm.addEventListener("input", function(event) {
+    const nextBpm = Math.min(132, Math.max(72, Number(event.target.value) || 96));
+    bpm = nextBpm;
+    event.target.value = nextBpm;
+    tempoControl.value = nextBpm;
+    document.getElementById("tempoValue").textContent = nextBpm + " BPM";
+  });
+
+  performanceTimeSig.addEventListener("change", function(event) {
+    currentSig = event.target.value;
+    stepsPerBar = computeStepsPerBar(currentSig);
+    currentStep = currentStep % stepsPerBar;
+    currentBar = 0;
+    timeSigSelect.value = currentSig;
+    renderTelemetry();
+  });
+
+  renderPerformanceStatus();
 }
 
 function setupTransportControls() {
@@ -475,6 +613,7 @@ function setupTransportControls() {
   tempoControl.addEventListener("input", function(event) {
     bpm = Number(event.target.value);
     document.getElementById("tempoValue").textContent = bpm + " BPM";
+    document.getElementById("performanceBpm").value = bpm;
   });
 
   swingControl.addEventListener("input", function(event) {
@@ -488,6 +627,7 @@ function setupTransportControls() {
 
 setupTimeSignatureSelect();
 setupTransportControls();
+setupPerformanceControls();
 renderTelemetry();
 
 function scheduleEnvelope(callback, delay) {
@@ -704,43 +844,43 @@ function playCurrentStep() {
   const patternStep = currentStep % 16;
   const tablaPattern = currentPart === 0 ? tablaGrooveA : tablaGrooveB;
 
-  if (tablaPattern[patternStep]) {
+  if (tablaPattern[patternStep] && isInstrumentEnabled("tabla")) {
     playTabla(tablaPattern[patternStep], patternStep % 4 === 0 ? 0.42 : 0.24);
   }
 
   if (kickPattern[patternStep] === 1) {
-    playKick();
-    playSubBass(bassPattern[patternStep] - 12);
+    if (isInstrumentEnabled("tabla")) playKick();
+    if (isInstrumentEnabled("subBass")) playSubBass(bassPattern[patternStep] - 12);
   }
 
-  if (snarePattern[patternStep] === 1) {
+  if (snarePattern[patternStep] === 1 && isInstrumentEnabled("tabla")) {
     playSnare();
   }
 
-  if (hatPattern[patternStep] === 1) {
+  if (hatPattern[patternStep] === 1 && isInstrumentEnabled("tabla")) {
     playHat(patternStep % 4 === 0);
   }
 
-  if (patternStep === 0) {
+  if (patternStep === 0 && isInstrumentEnabled("tabla")) {
     playCrash();
   } else if (
     patternStep === 4 ||
     patternStep === 8 ||
     patternStep === 12
   ) {
-    if (random() < crashChance) {
+    if (isInstrumentEnabled("tabla") && random() < crashChance) {
       playCrash();
     }
   }
 
-  playBass(bassPattern[patternStep]);
-  playSax(melodyPattern[patternStep]);
+  if (isInstrumentEnabled("bass")) playBass(bassPattern[patternStep]);
+  if (isInstrumentEnabled("sax")) playSax(melodyPattern[patternStep]);
 
-  if (patternStep === 3 || patternStep === 11) {
+  if ((patternStep === 3 || patternStep === 11) && isInstrumentEnabled("guitar")) {
     playGuitar(52);
   }
 
-  if (patternStep === 7 || patternStep === 15) {
+  if ((patternStep === 7 || patternStep === 15) && isInstrumentEnabled("tube")) {
     playTube(48);
   }
 }
