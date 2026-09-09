@@ -1107,7 +1107,6 @@ function startPlayback() {
 }
 
 function stopPlayback() {
-  if (!playing) return;
   playing = false;
   stopEverything();
   document.getElementById("startButton").disabled = false;
@@ -1120,15 +1119,25 @@ function stopPlayback() {
 }
 
 function stopEverything() {
-  bassSound.amp(0);
-  saxSound.amp(0);
-  guitarSound.amp(0);
-  tubeSound.amp(0);
-  subBassSound.amp(0);
+  pendingTimeouts.forEach(function(timeoutId) {
+    clearTimeout(timeoutId);
+  });
+  pendingTimeouts = [];
+
+  bassSound.amp(0, 0.01);
+  saxSound.amp(0, 0.01);
+  guitarSound.amp(0, 0.01);
+  tubeSound.amp(0, 0.01);
+  subBassSound.amp(0, 0.01);
 
   Object.values(tablaSounds).forEach(function(sample) {
     if (sample && sample.isPlaying()) sample.stop();
   });
+
+  soundTelemetry.frequency = 0;
+  soundTelemetry.amplitude = 0;
+  soundTelemetry.timbre = "Stopped";
+  renderTelemetry();
 }
 </script>
 </body>
