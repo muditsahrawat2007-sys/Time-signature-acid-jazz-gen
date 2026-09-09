@@ -225,6 +225,9 @@
   .solo-control { display: flex; align-items: center; gap: 8px; color: #ff1a1a; font: 10px "DM Mono", monospace; }
   .solo-control input { accent-color: #e60000; }
   .selected-status { margin-top: 12px; padding-top: 10px; color: #ff1a1a; border-top: 1px solid #707070; font: 10px "DM Mono", monospace; }
+  .set-control { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #ff1a1a; font: 10px "DM Mono", monospace; }
+  .set-control input { accent-color: #e60000; }
+  .set-clock { display: flex; justify-content: space-between; margin-top: 10px; color: #b8b8b8; font: 10px "DM Mono", monospace; }
   #sketch { min-height: 350px; background: #111; border-radius: 0; }
   #sketch canvas { position: absolute; inset: 0; z-index: 0; }
   .canvas-mixer { position: absolute; z-index: 1; inset: 18px 24px 22px; display: flex; flex-direction: column; }
@@ -312,11 +315,11 @@
           <div class="canvas-mixer" aria-label="Main mixer">
             <div class="canvas-mixer-head"><strong>BEATZ MIXER</strong><span>LIVE CHANNELS / MASTER OUT</span></div>
             <div class="canvas-mixer-channels">
-              <div class="canvas-channel"><span class="canvas-channel-name">DRUMS</span><div class="canvas-channel-meter"><i></i><i></i><i></i><i></i></div><output>-06 DB</output><input type="range" min="0" max="100" value="78" aria-label="Drums level"></div>
-              <div class="canvas-channel"><span class="canvas-channel-name">BASS</span><div class="canvas-channel-meter"><i></i><i></i><i></i><i></i></div><output>-10 DB</output><input type="range" min="0" max="100" value="68" aria-label="Bass level"></div>
-              <div class="canvas-channel"><span class="canvas-channel-name">SUB</span><div class="canvas-channel-meter"><i></i><i></i><i></i><i></i></div><output>-12 DB</output><input type="range" min="0" max="100" value="62" aria-label="Sub bass level"></div>
-              <div class="canvas-channel"><span class="canvas-channel-name">SAX</span><div class="canvas-channel-meter"><i></i><i></i><i></i><i></i></div><output>-14 DB</output><input type="range" min="0" max="100" value="55" aria-label="Saxophone level"></div>
-              <div class="canvas-channel"><span class="canvas-channel-name">FX</span><div class="canvas-channel-meter"><i></i><i></i><i></i><i></i></div><output>-18 DB</output><input type="range" min="0" max="100" value="42" aria-label="Effects level"></div>
+              <div class="canvas-channel"><span class="canvas-channel-name">DRUMS</span><div class="canvas-channel-meter"><i></i><i></i><i></i><i></i></div><output data-mixer-output="tabla">-06 DB</output><input type="range" min="0" max="100" value="78" aria-label="Drums level"></div>
+              <div class="canvas-channel"><span class="canvas-channel-name">BASS</span><div class="canvas-channel-meter"><i></i><i></i><i></i><i></i></div><output data-mixer-output="bass">-10 DB</output><input type="range" min="0" max="100" value="68" aria-label="Bass level"></div>
+              <div class="canvas-channel"><span class="canvas-channel-name">SUB</span><div class="canvas-channel-meter"><i></i><i></i><i></i><i></i></div><output data-mixer-output="subBass">-12 DB</output><input type="range" min="0" max="100" value="62" aria-label="Sub bass level"></div>
+              <div class="canvas-channel"><span class="canvas-channel-name">SAX</span><div class="canvas-channel-meter"><i></i><i></i><i></i><i></i></div><output data-mixer-output="melody">-14 DB</output><input type="range" min="0" max="100" value="55" aria-label="Saxophone level"></div>
+              <div class="canvas-channel"><span class="canvas-channel-name">FX</span><div class="canvas-channel-meter"><i></i><i></i><i></i><i></i></div><output data-mixer-output="fx">-18 DB</output><input type="range" min="0" max="100" value="42" aria-label="Effects level"></div>
             </div>
           </div>
         </div>
@@ -343,8 +346,10 @@
               <select id="performanceTimeSig" aria-label="Performance time signature"></select>
             </label>
             <label class="solo-control" for="soloInstrument"><input id="soloInstrument" type="checkbox"> SOLO SELECTED INSTRUMENT</label>
+            <label class="set-control" for="autoBuild"><span>AUTO BUILD / 20 MIN SET</span><input id="autoBuild" type="checkbox" checked></label>
           </div>
           <div class="selected-status" id="performanceStatus">All instruments are enabled</div>
+          <div class="set-clock"><span id="setStage">READY / INTRO</span><span id="setClock">20:00 SET</span></div>
         </div>
         <div class="mixer-title"><span>MIXER</span><span>PEAK</span></div>
         <div class="mixer-channels">
@@ -429,6 +434,11 @@ let currentSig = "4/4";
 let stepsPerBar = 16;
 let selectedInstrument = "all";
 let soloInstrument = false;
+let autoBuildEnabled = true;
+let performanceStartTime = 0;
+let performanceElapsed = 0;
+let autoStage = 0;
+let dawTimelineKey = "";
 const mixerLevels = {
   tabla: 0.78,
   bass: 0.68,
@@ -477,33 +487,41 @@ function renderDawTimeline() {
   const timeline = document.getElementById("timeline");
   if (!timeline) return;
 
-  const patterns = [
-    { name: "KICK", values: currentPart === 0 ? kickA : kickB, color: "#ef796c" },
-    { name: "SNARE", values: snarePattern, color: "#f2cf72" },
-    { name: "HAT", values: hatPattern, color: "#61c7b1" },
-    { name: "BASS", values: currentPart === 0 ? bassA : bassB, color: "#d9a7e8" },
-    { name: "SAX", values: currentPart === 0 ? saxA : saxB, color: "#f29f68" }
-  ];
+  const patternKey = currentPart + "|" + currentSig;
+  if (dawTimelineKey !== patternKey) {
+    const patterns = [
+      { name: "KICK", values: currentPart === 0 ? kickA : kickB, color: "#ef796c" },
+      { name: "SNARE", values: snarePattern, color: "#f2cf72" },
+      { name: "HAT", values: hatPattern, color: "#61c7b1" },
+      { name: "BASS", values: currentPart === 0 ? bassA : bassB, color: "#d9a7e8" },
+      { name: "SAX", values: currentPart === 0 ? saxA : saxB, color: "#f29f68" }
+    ];
 
-  timeline.innerHTML = "<span class=\"track-name\">TRACK</span>";
-  for (let step = 0; step < 16; step++) {
-    timeline.insertAdjacentHTML("beforeend", "<span class=\"step " + (step % 4 === 0 ? "beat" : "") + "\">" + (step + 1) + "</span>");
+    timeline.innerHTML = "<span class=\"track-name\">TRACK</span>";
+    for (let step = 0; step < 16; step++) {
+      timeline.insertAdjacentHTML("beforeend", "<span class=\"step " + (step % 4 === 0 ? "beat" : "") + "\">" + (step + 1) + "</span>");
+    }
+
+    patterns.forEach(function(pattern) {
+      const label = document.createElement("span");
+      label.className = "track-name";
+      label.textContent = pattern.name;
+      timeline.appendChild(label);
+
+      for (let step = 0; step < 16; step++) {
+        const cell = document.createElement("span");
+        cell.className = "step";
+        cell.style.setProperty("--track-color", pattern.color);
+        if (pattern.values[step]) cell.classList.add("active");
+        timeline.appendChild(cell);
+      }
+    });
+    dawTimelineKey = patternKey;
   }
 
-  patterns.forEach(function(pattern) {
-    const label = document.createElement("span");
-    label.className = "track-name";
-    label.textContent = pattern.name;
-    timeline.appendChild(label);
-
-    for (let step = 0; step < 16; step++) {
-      const cell = document.createElement("span");
-      cell.className = "step";
-      cell.style.setProperty("--track-color", pattern.color);
-      if (pattern.values[step]) cell.classList.add("active");
-      if (playing && step === currentStep % 16) cell.classList.add("playhead");
-      timeline.appendChild(cell);
-    }
+  timeline.querySelectorAll(".step").forEach(function(cell, index) {
+    const rowStep = index < 16 ? -1 : (index - 16) % 16;
+    cell.classList.toggle("playhead", playing && rowStep === currentStep % 16);
   });
 
   const barDisplay = document.getElementById("barDisplay");
@@ -517,7 +535,47 @@ function computeStepsPerBar(signature) {
   return Math.max(1, Math.round(16 * beats / noteValue));
 }
 
+const performanceStages = [
+  { start: 0, label: "INTRO / TABLA", instruments: ["tabla"] },
+  { start: 120, label: "FOUNDATION / BASS", instruments: ["tabla", "bass"] },
+  { start: 300, label: "LOW END / SUB", instruments: ["tabla", "bass", "subBass"] },
+  { start: 480, label: "MELODY / SAX", instruments: ["tabla", "bass", "subBass", "sax"] },
+  { start: 660, label: "EXPANSION / FX", instruments: ["tabla", "bass", "subBass", "sax", "guitar", "tube"] },
+  { start: 840, label: "FULL BEAT / FINALE", instruments: ["tabla", "bass", "subBass", "sax", "guitar", "tube"] }
+];
+
+function updatePerformanceSet() {
+  if (!playing) return;
+
+  performanceElapsed = Math.max(0, (millis() - performanceStartTime) / 1000);
+  let nextStage = 0;
+  performanceStages.forEach(function(stage, index) {
+    if (performanceElapsed >= stage.start) nextStage = index;
+  });
+  if (nextStage !== autoStage) {
+    autoStage = nextStage;
+    renderDawTimeline();
+  }
+
+  const remaining = Math.max(0, 1200 - performanceElapsed);
+  const clock = document.getElementById("setClock");
+  const stage = document.getElementById("setStage");
+  if (clock) clock.textContent = remaining > 0
+    ? formatSetTime(remaining) + " LEFT"
+    : "FULL GROOVE";
+  if (stage) stage.textContent = performanceStages[autoStage].label;
+}
+
+function formatSetTime(seconds) {
+  const minutes = Math.floor(seconds / 60);
+  const remainder = Math.floor(seconds % 60).toString().padStart(2, "0");
+  return String(minutes).padStart(2, "0") + ":" + remainder;
+}
+
 function isInstrumentEnabled(instrument) {
+  if (autoBuildEnabled && playing) {
+    return performanceStages[autoStage].instruments.indexOf(instrument) !== -1;
+  }
   return !soloInstrument || selectedInstrument === "all" || selectedInstrument === instrument;
 }
 
@@ -530,7 +588,9 @@ function renderPerformanceStatus() {
   const label = select.options[select.selectedIndex].textContent;
   const liveLabel = soloInstrument && selectedInstrument !== "all" ? "SOLO" : "ALL LIVE";
   badge.textContent = liveLabel;
-  status.textContent = soloInstrument && selectedInstrument !== "all"
+  status.textContent = autoBuildEnabled && playing
+    ? "Auto Build is live / instruments enter over 20 minutes"
+    : soloInstrument && selectedInstrument !== "all"
     ? label + " is live / other instruments muted"
     : "All instruments are enabled";
 }
@@ -574,13 +634,19 @@ function setupPerformanceControls() {
 
   instrumentSelect.addEventListener("change", function(event) {
     selectedInstrument = event.target.value;
-    soloInstrument = selectedInstrument !== "all";
-    soloControl.checked = soloInstrument;
+    soloInstrument = soloControl.checked;
     renderPerformanceStatus();
   });
 
   soloControl.addEventListener("change", function(event) {
     soloInstrument = event.target.checked;
+    renderPerformanceStatus();
+  });
+
+  document.getElementById("autoBuild").addEventListener("change", function(event) {
+    autoBuildEnabled = event.target.checked;
+    if (autoBuildEnabled) soloInstrument = false;
+    soloControl.checked = soloInstrument;
     renderPerformanceStatus();
   });
 
@@ -610,7 +676,10 @@ function setupMixerControls() {
 
   controls.forEach(function(control, index) {
     control.addEventListener("input", function(event) {
-      mixerLevels[levelMap[index]] = Number(event.target.value) / 100;
+      const level = Number(event.target.value) / 100;
+      mixerLevels[levelMap[index]] = level;
+      const output = document.querySelector("[data-mixer-output=\"" + levelMap[index] + "\"]");
+      if (output) output.textContent = level === 0 ? "-INF DB" : Math.round(20 * Math.log10(level)) + " DB";
     });
   });
 }
@@ -800,6 +869,7 @@ function draw() {
   background(18);
   renderLevelBars();
   renderDawTimeline();
+  updatePerformanceSet();
   fill(230, 0, 0);
   textSize(30);
 
@@ -817,7 +887,7 @@ function draw() {
   text("Bar " + (currentBar + 1), width/2, 200);
 
   textSize(16);
-  text("96 BPM • " + currentSig + " • " + stepsPerBar + " steps/bar", width/2, 270);
+  text(bpm + " BPM • " + currentSig + " • " + stepsPerBar + " steps/bar", width/2, 270);
 
   if (!playing) {
     return;
@@ -1015,12 +1085,16 @@ function startPlayback() {
 
   startEverything();
   playing = true;
+  performanceStartTime = millis();
+  performanceElapsed = 0;
+  autoStage = 0;
   currentStep = 0;
   currentBar = 0;
   currentPart = 0;
-  lastStepTime = millis();
+  lastStepTime = millis() - getStepDuration(currentStep);
   document.getElementById("startButton").disabled = true;
   document.getElementById("stopButton").disabled = false;
+  renderPerformanceStatus();
   playCurrentStep();
 }
 
@@ -1030,33 +1104,23 @@ function stopPlayback() {
   stopEverything();
   document.getElementById("startButton").disabled = false;
   document.getElementById("stopButton").disabled = true;
+  performanceElapsed = 0;
+  autoStage = 0;
+  document.getElementById("setStage").textContent = "READY / INTRO";
+  document.getElementById("setClock").textContent = "20:00 SET";
+  renderPerformanceStatus();
 }
 
 function stopEverything() {
-  pendingTimeouts.forEach(function(timeoutId) {
-    clearTimeout(timeoutId);
-  });
-  pendingTimeouts = [];
-
-  kickSound.amp(0);
-  snareSound.amp(0);
-  hatSound.amp(0);
-  crashSound.amp(0);
   bassSound.amp(0);
   saxSound.amp(0);
   guitarSound.amp(0);
   tubeSound.amp(0);
   subBassSound.amp(0);
 
-  kickSound.stop();
-  snareSound.stop();
-  hatSound.stop();
-  crashSound.stop();
-  bassSound.stop();
-  saxSound.stop();
-  guitarSound.stop();
-  tubeSound.stop();
-  subBassSound.stop();
+  Object.values(tablaSounds).forEach(function(sample) {
+    if (sample && sample.isPlaying()) sample.stop();
+  });
 }
 </script>
 </body>
