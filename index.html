@@ -573,9 +573,10 @@ function formatSetTime(seconds) {
 }
 
 function isInstrumentEnabled(instrument) {
-  if (autoBuildEnabled && playing) {
-    return performanceStages[autoStage].instruments.indexOf(instrument) !== -1;
+  if (soloInstrument && selectedInstrument !== "all") {
+    return selectedInstrument === instrument;
   }
+  if (autoBuildEnabled && playing) return performanceStages[autoStage].instruments.indexOf(instrument) !== -1;
   return !soloInstrument || selectedInstrument === "all" || selectedInstrument === instrument;
 }
 
@@ -634,7 +635,14 @@ function setupPerformanceControls() {
 
   instrumentSelect.addEventListener("change", function(event) {
     selectedInstrument = event.target.value;
-    soloInstrument = soloControl.checked;
+    if (selectedInstrument === "all") {
+      soloInstrument = false;
+    } else {
+      autoBuildEnabled = false;
+      document.getElementById("autoBuild").checked = false;
+      soloInstrument = true;
+    }
+    soloControl.checked = soloInstrument;
     renderPerformanceStatus();
   });
 
