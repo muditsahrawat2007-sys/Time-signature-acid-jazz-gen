@@ -400,6 +400,12 @@ let pianoSound;
 let tablaSounds = {};
 let tanpuraSounds = [];
 let pianoSounds = {};
+let nativeTablaSounds = {};
+let nativeTanpuraSounds = [];
+let nativeAudioContext;
+let nativeMasterGain;
+let nativeSaxOscillator;
+let nativeSaxGain;
 
 let playing = false;
 let audioEnabled = false;
@@ -464,6 +470,24 @@ function setMasterOutput(level) {
   if (p5.soundOut && p5.soundOut.output && p5.soundOut.output.gain) {
     p5.soundOut.output.gain.value = Math.max(0, Math.min(1, level));
   }
+  if (nativeMasterGain) nativeMasterGain.gain.value = Math.max(0, Math.min(1, level));
+}
+
+function createNativeAudio() {
+  if (!nativeAudioContext) {
+    nativeAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+    nativeMasterGain = nativeAudioContext.createGain();
+    nativeMasterGain.connect(nativeAudioContext.destination);
+  }
+  nativeAudioContext.resume().catch(function() {});
+  setMasterOutput(audioEnabled ? masterLevel : 0);
+}
+
+function loadNativeAudio(url) {
+  const audio = new Audio(url);
+  audio.preload = "auto";
+  audio.load();
+  return audio;
 }
 
 function keepAudioEngineRunning() {
@@ -895,6 +919,13 @@ function setup() {
     loadSound("tanpura/tanpura-c3.mp3"),
     loadSound("tanpura/tanpura-cs2.mp3")
   ];
+  ["dha", "dhe", "dhec", "dhen", "dhin", "dhun", "ga", "kat", "na", "ne", "re", "tak", "tin", "tit", "tun"].forEach(function(stroke) {
+    nativeTablaSounds[stroke] = loadNativeAudio("tabla-ajaysm/" + stroke + ".mp3");
+  });
+  nativeTanpuraSounds = [
+    loadNativeAudio("tanpura/tanpura-c3.mp3"),
+    loadNativeAudio("tanpura/tanpura-cs2.mp3")
+  ];
   ["A3", "C4", "Fs3"].forEach(function(note) {
     const piano = new Audio("piano/" + note + ".m4a");
     piano.preload = "auto";
@@ -1051,10 +1082,12 @@ function playCrash() {
 
 function playTabla(stroke, level) {
   if (!audioEnabled || !playing) return;
-  const sample = tablaSounds[stroke];
-  if (sample && sample.isLoaded()) {
-    if (sample.isPlaying()) sample.stop();
-    sample.play(0, 1, level * mixerLevels.tabla);
+  const sample = nativeTablaSounds[stroke];
+  if (sample) {
+    sample.pause();
+    sample.currentTime = 0;
+    sample.volume = level * mixerLevels.tabla;
+    sample.play().catch(function() {});
   }
 }
 
@@ -1064,25 +1097,44 @@ function playSax(midi) {
   const noteId = ++saxNoteId;
   updateTelemetry(frequency, 0.13, "Sawtooth sax");
 
-  saxSound.amp(0, 0.01);
-  saxSound.freq(frequency, 0.02);
-  saxSound.amp(0.13 * mixerLevels.melody, 0.02);
+  createNativeAudio();
+  if (nativeSaxOscillator) {
+    try { nativeSaxOscillator.stop(); } catch (error) {}
+  }
+  nativeSaxOscillator = nativeAudioContext.createOscillator();
+  nativeSaxGain = nativeAudioContext.createGain();
+  nativeSaxOscillator.type = "sawtooth";
+  nativeSaxOscillator.frequency.value = frequency;
+  nativeSaxGain.gain.setValueAtTime(0.0001, nativeAudioContext.currentTime);
+  nativeSaxGain.gain.linearRampToValueAtTime(0.13 * mixerLevels.melody, nativeAudioContext.currentTime + 0.02);
+  nativeSaxGain.gain.exponentialRampToValueAtTime(0.0001, nativeAudioContext.currentTime + 0.15);
+  nativeSaxOscillator.connect(nativeSaxGain);
+  nativeSaxGain.connect(nativeMasterGain);
+  nativeSaxOscillator.onended = function() {
+    if (nativeSaxOscillator === this) nativeSaxOscillator = null;
+  };
+  nativeSaxOscillator.start();
+  nativeSaxOscillator.stop(nativeAudioContext.currentTime + 0.17);
 
   scheduleEnvelope(function() {
-    if (noteId === saxNoteId) saxSound.amp(0, 0.10);
+    if (noteId === saxNoteId) saxSound.amp(0);
   }, 150);
 }
 
 function playTanpura(index) {
   if (!audioEnabled || !playing) return;
-  const sample = tanpuraSounds[index % tanpuraSounds.length];
+  const sample = nativeTanpuraSounds[index % nativeTanpuraSounds.length];
   updateTelemetry(130.81, 0.12, "Tanpura drone");
-  if (sample && sample.isLoaded()) {
-    tanpuraSounds.forEach(function(drone) {
-      if (drone && drone !== sample && drone.isPlaying()) drone.stop();
+  if (sample) {
+    nativeTanpuraSounds.forEach(function(drone) {
+      if (drone && drone !== sample) {
+        drone.pause();
+        drone.currentTime = 0;
+      }
     });
-    if (sample.isPlaying()) sample.stop();
-    sample.play(0, 1, 0.12 * mixerLevels.tanpura);
+    sample.volume = 0.12 * mixerLevels.tanpura;
+    sample.currentTime = 0;
+    sample.play().catch(function() {});
   }
 }
 
@@ -1121,6 +1173,7 @@ function startPlayback() {
 
   startEverything();
   audioEnabled = true;
+  createNativeAudio();
   setMasterOutput(masterLevel);
   playing = true;
   performanceStartTime = millis();
@@ -1163,10 +1216,20 @@ function stopEverything() {
   saxSound.amp(0);
   pianoSound.amp(0);
   saxNoteId++;
+  if (nativeSaxOscillator) {
+    try { nativeSaxOscillator.stop(); } catch (error) {}
+    nativeSaxOscillator = null;
+  }
 
   const activeSamples = Object.values(tablaSounds).concat(tanpuraSounds);
   activeSamples.forEach(function(sample) {
     if (sample && sample.isPlaying()) sample.stop();
+  });
+  Object.values(nativeTablaSounds).concat(nativeTanpuraSounds).forEach(function(sample) {
+    if (sample) {
+      sample.pause();
+      sample.currentTime = 0;
+    }
   });
   Object.values(pianoSounds).forEach(function(sample) {
     if (sample) {
