@@ -687,6 +687,8 @@ function setupPerformanceControls() {
     selectedInstrument = event.target.value;
     if (selectedInstrument === "all") {
       soloInstrument = false;
+      autoBuildEnabled = false;
+      document.getElementById("autoBuild").checked = false;
     } else {
       autoBuildEnabled = false;
       document.getElementById("autoBuild").checked = false;
