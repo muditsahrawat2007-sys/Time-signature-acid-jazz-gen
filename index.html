@@ -466,6 +466,15 @@ function setMasterOutput(level) {
   }
 }
 
+function keepAudioEngineRunning() {
+  if (!audioEnabled || !playing) return;
+  const context = getAudioContext();
+  if (context.state !== "running") context.resume().catch(function() {});
+  if (p5.soundOut && p5.soundOut.output && p5.soundOut.output.gain.value === 0) {
+    setMasterOutput(masterLevel);
+  }
+}
+
 function renderTelemetry() {
   document.getElementById("frequencyValue").textContent = soundTelemetry.frequency
     ? Math.round(soundTelemetry.frequency) + " Hz"
@@ -926,6 +935,7 @@ function setup() {
 
 function draw() {
   background(18);
+  keepAudioEngineRunning();
   renderLevelBars();
   renderDawTimeline();
   updatePerformanceSet();
@@ -1043,6 +1053,7 @@ function playTabla(stroke, level) {
   if (!audioEnabled || !playing) return;
   const sample = tablaSounds[stroke];
   if (sample && sample.isLoaded()) {
+    if (sample.isPlaying()) sample.stop();
     sample.play(0, 1, level * mixerLevels.tabla);
   }
 }
@@ -1070,6 +1081,7 @@ function playTanpura(index) {
     tanpuraSounds.forEach(function(drone) {
       if (drone && drone !== sample && drone.isPlaying()) drone.stop();
     });
+    if (sample.isPlaying()) sample.stop();
     sample.play(0, 1, 0.12 * mixerLevels.tanpura);
   }
 }
