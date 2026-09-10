@@ -619,6 +619,7 @@ function formatSetTime(seconds) {
 }
 
 function isInstrumentEnabled(instrument) {
+  if (selectedInstrument === "all" && !soloInstrument) return true;
   if (soloInstrument && selectedInstrument !== "all") {
     return selectedInstrument === instrument;
   }
