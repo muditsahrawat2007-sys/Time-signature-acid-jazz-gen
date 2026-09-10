@@ -234,7 +234,7 @@
   .canvas-mixer-head { display: flex; justify-content: space-between; align-items: center; color: #ff1a1a; font: 11px "DM Mono", monospace; letter-spacing: .08em; }
   .canvas-mixer-head strong { font-size: 18px; letter-spacing: 0; }
   .canvas-mixer-head span:last-child { color: #b8b8b8; font-size: 10px; }
-  .canvas-mixer-channels { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; flex: 1; margin-top: 14px; }
+  .canvas-mixer-channels { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; flex: 1; margin-top: 14px; }
   .canvas-channel { display: flex; flex-direction: column; align-items: center; min-width: 0; padding: 10px 8px; background: #4a4a4a; border: 1px solid #808080; }
   .canvas-channel-name { color: #ff1a1a; font: 10px "DM Mono", monospace; writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: .06em; }
   .canvas-channel-meter { display: flex; align-items: end; justify-content: center; gap: 3px; width: 100%; height: 130px; margin: auto 0 12px; }
@@ -247,7 +247,7 @@
   .canvas-channel input { width: 100%; margin-top: 10px; accent-color: #e60000; }
   @media (max-width: 800px) {
     .canvas-mixer { inset: 14px 12px 16px; }
-    .canvas-mixer-channels { gap: 5px; }
+    .canvas-mixer-channels { grid-template-columns: repeat(7, minmax(58px, 1fr)); gap: 5px; overflow-x: auto; }
     .canvas-channel { padding: 7px 4px; }
     .canvas-channel-meter { height: 100px; }
     .canvas-channel-meter i { width: 4px; }
@@ -308,7 +308,7 @@
     </div>
     <div class="daw-layout">
       <div class="arrangement">
-        <div class="arrangement-head"><span>ARRANGEMENT / 16 STEP GRID</span><span id="barDisplay">BAR 01 / PART A</span></div>
+        <div class="arrangement-head"><span>ARRANGEMENT / 8 PART GROOVE CYCLE</span><span id="barDisplay">BAR 01 / PART A</span></div>
         <div id="timeline" class="timeline" aria-label="Live arrangement timeline"></div>
         <div id="sketch">
           <div id="sketch-status">Loading audio engine...</div>
@@ -319,7 +319,9 @@
               <div class="canvas-channel"><span class="canvas-channel-name">BASS</span><div class="canvas-channel-meter"><i></i><i></i><i></i><i></i></div><output data-mixer-output="bass">-10 DB</output><input type="range" min="0" max="100" value="68" aria-label="Bass level"></div>
               <div class="canvas-channel"><span class="canvas-channel-name">SUB</span><div class="canvas-channel-meter"><i></i><i></i><i></i><i></i></div><output data-mixer-output="subBass">-12 DB</output><input type="range" min="0" max="100" value="62" aria-label="Sub bass level"></div>
               <div class="canvas-channel"><span class="canvas-channel-name">SAX</span><div class="canvas-channel-meter"><i></i><i></i><i></i><i></i></div><output data-mixer-output="melody">-14 DB</output><input type="range" min="0" max="100" value="55" aria-label="Saxophone level"></div>
-              <div class="canvas-channel"><span class="canvas-channel-name">FX</span><div class="canvas-channel-meter"><i></i><i></i><i></i><i></i></div><output data-mixer-output="fx">-18 DB</output><input type="range" min="0" max="100" value="42" aria-label="Effects level"></div>
+              <div class="canvas-channel"><span class="canvas-channel-name">TANPURA</span><div class="canvas-channel-meter"><i></i><i></i><i></i><i></i></div><output data-mixer-output="tanpura">-18 DB</output><input type="range" min="0" max="100" value="42" aria-label="Tanpura level"></div>
+              <div class="canvas-channel"><span class="canvas-channel-name">BOWLS</span><div class="canvas-channel-meter"><i></i><i></i><i></i><i></i></div><output data-mixer-output="bowls">-20 DB</output><input type="range" min="0" max="100" value="36" aria-label="Singing bowls level"></div>
+              <div class="canvas-channel"><span class="canvas-channel-name">PIANO</span><div class="canvas-channel-meter"><i></i><i></i><i></i><i></i></div><output data-mixer-output="piano">-16 DB</output><input type="range" min="0" max="100" value="48" aria-label="Piano level"></div>
             </div>
           </div>
         </div>
@@ -335,8 +337,9 @@
                 <option value="bass">Bass</option>
                 <option value="subBass">Sub-bass</option>
                 <option value="sax">Saxophone</option>
-                <option value="guitar">Guitar</option>
-                <option value="tube">Tube</option>
+                <option value="tanpura">Tanpura</option>
+                <option value="bowls">Bowls</option>
+                <option value="piano">Piano</option>
               </select>
             </label>
             <label class="performance-field" for="performanceBpm">PERFORMANCE BPM
@@ -378,7 +381,7 @@
     <article>
       <span class="section-label">How it locks</span>
       <h2>One shared musical clock</h2>
-      <p>The sax phrase gives the groove its melodic voice. Then the 4/4 time signature lays a four-beat bar underneath it, giving the kick, snare, bass, guitar, and tube parts the same place to begin and return to. A crash at the start of the bar acts like a bright signpost, while every part follows the same 16-step count, keeping the full audio in sync.</p>
+      <p>The sax phrase gives the groove its melodic voice. Then the 4/4 time signature lays a four-beat bar underneath it, giving the kick, snare, bass, tanpura, bowls, and piano parts the same place to begin and return to. A crash at the start of the bar acts like a bright signpost, while every part follows the same 16-step count, keeping the full audio in sync.</p>
     </article>
     <article id="ideas">
       <span class="section-label">Ideas</span>
@@ -398,11 +401,12 @@ let crashFilter;
 
 let bassSound;
 let saxSound;
-let guitarSound;
-let tubeSound;
 let subBassSound;
 
 let tablaSounds = {};
+let tanpuraSounds = [];
+let bowlSounds = [];
+let pianoSounds = {};
 
 let playing = false;
 let pendingTimeouts = [];
@@ -410,6 +414,7 @@ let pendingTimeouts = [];
 let currentStep = 0;
 let currentBar = 0;
 let currentPart = 0;
+let recentGrooveParts = [0];
 
 let lastStepTime = 0;
 
@@ -438,13 +443,17 @@ let autoBuildEnabled = true;
 let performanceStartTime = 0;
 let performanceElapsed = 0;
 let autoStage = 0;
+let nextSignatureChangeAt = 300;
+let signatureChangePending = false;
 let dawTimelineKey = "";
 const mixerLevels = {
   tabla: 0.78,
   bass: 0.68,
   subBass: 0.62,
   melody: 0.55,
-  fx: 0.42
+  tanpura: 0.42,
+  bowls: 0.36,
+  piano: 0.48
 };
 let soundTelemetry = {
   frequency: 0,
@@ -489,12 +498,13 @@ function renderDawTimeline() {
 
   const patternKey = currentPart + "|" + currentSig;
   if (dawTimelineKey !== patternKey) {
+    const activePart = grooveParts[currentPart];
     const patterns = [
-      { name: "KICK", values: currentPart === 0 ? kickA : kickB, color: "#ef796c" },
-      { name: "SNARE", values: snarePattern, color: "#f2cf72" },
-      { name: "HAT", values: hatPattern, color: "#61c7b1" },
-      { name: "BASS", values: currentPart === 0 ? bassA : bassB, color: "#d9a7e8" },
-      { name: "SAX", values: currentPart === 0 ? saxA : saxB, color: "#f29f68" }
+      { name: "KICK", values: activePart.kick, color: "#ef796c" },
+      { name: "SNARE", values: activePart.snare, color: "#f2cf72" },
+      { name: "HAT", values: activePart.hat, color: "#61c7b1" },
+      { name: "BASS", values: activePart.bass, color: "#d9a7e8" },
+      { name: "SAX", values: activePart.sax, color: "#f29f68" }
     ];
 
     timeline.innerHTML = "<span class=\"track-name\">TRACK</span>";
@@ -526,7 +536,7 @@ function renderDawTimeline() {
 
   const barDisplay = document.getElementById("barDisplay");
   if (barDisplay) {
-    barDisplay.textContent = "BAR " + String(currentBar + 1).padStart(2, "0") + " / PART " + (currentPart === 0 ? "A" : "B");
+    barDisplay.textContent = "BAR " + String(currentBar + 1).padStart(2, "0") + " / PART " + String.fromCharCode(65 + currentPart);
   }
 }
 
@@ -535,19 +545,59 @@ function computeStepsPerBar(signature) {
   return Math.max(1, Math.round(16 * beats / noteValue));
 }
 
+const generativeSignatures = ["4/4", "3/4", "5/4", "6/8", "7/8", "9/8"];
+
+function chooseNextGroovePart() {
+  const candidates = grooveParts.map(function(part, index) {
+    return index;
+  }).filter(function(index) {
+    return index !== currentPart && recentGrooveParts.indexOf(index) === -1;
+  });
+  const pool = candidates.length ? candidates : grooveParts.map(function(part, index) {
+    return index;
+  }).filter(function(index) {
+    return index !== currentPart;
+  });
+  const nextPart = pool[Math.floor(random(pool.length))];
+  recentGrooveParts.push(nextPart);
+  if (recentGrooveParts.length > 3) recentGrooveParts.shift();
+  return nextPart;
+}
+
+function requestSignatureChange() {
+  if (performanceElapsed < nextSignatureChangeAt) return;
+  signatureChangePending = true;
+}
+
+function applySignatureChange() {
+  if (!signatureChangePending) return;
+  const candidates = generativeSignatures.filter(function(signature) {
+    return signature !== currentSig;
+  });
+  currentSig = candidates[Math.floor(random(candidates.length))];
+  stepsPerBar = computeStepsPerBar(currentSig);
+  signatureChangePending = false;
+  nextSignatureChangeAt = performanceElapsed + 300;
+  document.getElementById("timeSigSelect").value = currentSig;
+  document.getElementById("performanceTimeSig").value = currentSig;
+  dawTimelineKey = "";
+  renderTelemetry();
+}
+
 const performanceStages = [
-  { start: 0, label: "INTRO / TABLA", instruments: ["tabla"] },
+  { start: 0, label: "INTRO / TABLA + BASS", instruments: ["tabla", "bass"] },
   { start: 120, label: "FOUNDATION / BASS", instruments: ["tabla", "bass"] },
   { start: 300, label: "LOW END / SUB", instruments: ["tabla", "bass", "subBass"] },
   { start: 480, label: "MELODY / SAX", instruments: ["tabla", "bass", "subBass", "sax"] },
-  { start: 660, label: "EXPANSION / FX", instruments: ["tabla", "bass", "subBass", "sax", "guitar", "tube"] },
-  { start: 840, label: "FULL BEAT / FINALE", instruments: ["tabla", "bass", "subBass", "sax", "guitar", "tube"] }
+  { start: 660, label: "EXPANSION / STRINGS", instruments: ["tabla", "bass", "subBass", "sax", "tanpura", "bowls"] },
+  { start: 840, label: "FULL BEAT / FINALE", instruments: ["tabla", "bass", "subBass", "sax", "tanpura", "bowls", "piano"] }
 ];
 
 function updatePerformanceSet() {
   if (!playing) return;
 
   performanceElapsed = Math.max(0, (millis() - performanceStartTime) / 1000);
+  requestSignatureChange();
   let nextStage = 0;
   performanceStages.forEach(function(stage, index) {
     if (performanceElapsed >= stage.start) nextStage = index;
@@ -563,7 +613,7 @@ function updatePerformanceSet() {
   if (clock) clock.textContent = remaining > 0
     ? formatSetTime(remaining) + " LEFT"
     : "FULL GROOVE";
-  if (stage) stage.textContent = performanceStages[autoStage].label;
+  if (stage) stage.textContent = performanceStages[autoStage].label + " / " + currentSig;
 }
 
 function formatSetTime(seconds) {
@@ -679,7 +729,7 @@ function setupPerformanceControls() {
 }
 
 function setupMixerControls() {
-  const levelMap = ["tabla", "bass", "subBass", "melody", "fx"];
+  const levelMap = ["tabla", "bass", "subBass", "melody", "tanpura", "bowls", "piano"];
   const controls = document.querySelectorAll(".canvas-channel input[type=range]");
 
   controls.forEach(function(control, index) {
@@ -816,6 +866,18 @@ const saxB = [
   67,67,64,64
 ];
 
+const grooveParts = [
+  { kick: kickA, snare: snarePattern, hat: hatPattern, bass: bassA, sax: saxA, tabla: tablaGrooveA },
+  { kick: kickB, snare: snarePattern, hat: hatPattern, bass: bassB, sax: saxB, tabla: tablaGrooveB },
+  { kick: [1,0,0,0, 0,0,1,0, 1,0,0,0, 0,1,0,0], snare: snarePattern, hat: hatPattern, bass: [36,36,36,36, 39,39,41,41, 41,41,39,39, 38,38,36,36], sax: [64,64,67,69, 69,69,71,69, 67,67,64,64, 62,62,64,64], tabla: ["dha",null,"tin","na", "dhin","kat",null,"tin", "dha","re","tin","kat", "dhec",null,"tak","tin"] },
+  { kick: [1,0,0,0, 0,1,0,0, 1,0,0,1, 0,0,1,0], snare: snarePattern, hat: [1,0,1,1, 1,0,1,0, 1,0,1,1, 1,0,1,0], bass: [36,36,39,39, 39,39,41,41, 43,43,41,41, 38,38,36,36], sax: saxB, tabla: tablaGrooveB },
+  { kick: [1,0,0,0, 0,0,1,0, 1,0,1,0, 0,0,1,0], snare: [0,0,0,0, 1,0,0,0, 0,0,0,1, 1,0,0,0], hat: hatPattern, bass: [36,36,36,36, 39,39,39,39, 41,41,43,43, 41,41,38,38], sax: [67,67,69,69, 71,71,69,69, 67,67,64,64, 62,62,64,64], tabla: tablaGrooveA },
+  { kick: [1,0,0,1, 0,0,1,0, 1,0,0,0, 0,1,1,0], snare: snarePattern, hat: [1,0,1,0, 1,1,1,0, 1,0,1,0, 1,0,1,1], bass: bassB, sax: saxA, tabla: ["dha",null,"tin","kat", "dhin",null,"tin","tak", "dha","re","tin",null, "dhe","kat","tak","tin"] },
+  { kick: [1,0,0,0, 0,0,1,0, 1,0,0,1, 0,0,1,0], snare: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0], hat: hatPattern, bass: [36,36,36,36, 39,39,39,39, 41,41,41,41, 38,38,36,36], sax: saxB, tabla: tablaGrooveB },
+  { kick: kickA, snare: snarePattern, hat: [1,0,1,1, 1,0,1,0, 1,0,1,1, 1,0,1,0], bass: bassA, sax: [64,64,67,67, 69,69,71,71, 74,74,71,71, 69,69,67,67], tabla: tablaGrooveA },
+  { kick: kickB, snare: [0,0,0,0, 1,0,0,0, 0,0,0,1, 1,0,0,0], hat: hatPattern, bass: [36,36,39,39, 39,39,41,41, 43,43,41,41, 38,38,36,36], sax: saxB, tabla: tablaGrooveB }
+];
+
 function preload() {
   const tablaStrokes = [
     "dha", "dhe", "dhec", "dhen", "dhin", "dhun", "ga", "kat",
@@ -825,6 +887,7 @@ function preload() {
   tablaStrokes.forEach(function(stroke) {
     tablaSounds[stroke] = loadSound("tabla-ajaysm/" + stroke + ".mp3");
   });
+
 }
 
 function setup() {
@@ -832,6 +895,17 @@ function setup() {
   canvas.parent("sketch");
   document.getElementById("sketch-status").hidden = true;
   textAlign(CENTER,CENTER);
+
+  tanpuraSounds = [
+    loadSound("tanpura/tanpura-c3.mp3"),
+    loadSound("tanpura/tanpura-cs2.mp3")
+  ];
+  bowlSounds = [1, 2, 3, 4, 5, 6].map(function(number) {
+    return loadSound("bowls/bowl" + number + ".mp3");
+  });
+  ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "A1", "A2", "A3", "A4", "A5", "A6", "Ds1", "Ds2", "Ds3", "Ds4", "Ds5", "Ds6", "Fs1", "Fs2", "Fs3", "Fs4", "Fs5", "Fs6"].forEach(function(note) {
+    pianoSounds[note] = loadSound("piano/" + note + ".m4a");
+  });
 
   kickSound = new p5.Oscillator("sine");
   snareSound = new p5.Noise("white");
@@ -846,8 +920,6 @@ function setup() {
 
   bassSound = new p5.Oscillator("triangle");
   saxSound = new p5.Oscillator("sawtooth");
-  guitarSound = new p5.Oscillator("triangle");
-  tubeSound = new p5.Oscillator("sine");
   subBassSound = new p5.Oscillator("sine");
 
   kickSound.start();
@@ -857,8 +929,6 @@ function setup() {
 
   bassSound.start();
   saxSound.start();
-  guitarSound.start();
-  tubeSound.start();
   subBassSound.start();
 
   kickSound.amp(0);
@@ -868,8 +938,6 @@ function setup() {
 
   bassSound.amp(0);
   saxSound.amp(0);
-  guitarSound.amp(0);
-  tubeSound.amp(0);
   subBassSound.amp(0);
 }
 
@@ -912,37 +980,24 @@ function draw() {
 
       if (currentBar >= 4) {
         currentBar = 0;
-
-        if (currentPart === 0) {
-          currentPart = 1;
-        } else {
-          currentPart = 0;
-        }
+        currentPart = chooseNextGroovePart();
+        applySignatureChange();
       }
     }
   }
 }
 
 function playCurrentStep() {
-  let kickPattern;
-  let bassPattern;
-  let melodyPattern;
-
-  if (currentPart === 0) {
-    kickPattern = kickA;
-    bassPattern = bassA;
-    melodyPattern = saxA;
-  } else {
-    kickPattern = kickB;
-    bassPattern = bassB;
-    melodyPattern = saxB;
-  }
+  const activePart = grooveParts[currentPart];
+  const kickPattern = activePart.kick;
+  const bassPattern = activePart.bass;
+  const melodyPattern = activePart.sax;
 
   const patternStep = currentStep % 16;
-  const tablaPattern = currentPart === 0 ? tablaGrooveA : tablaGrooveB;
+  const tablaPattern = activePart.tabla;
 
   if (tablaPattern[patternStep] && isInstrumentEnabled("tabla")) {
-    playTabla(tablaPattern[patternStep], patternStep % 4 === 0 ? 0.42 : 0.24);
+    playTabla(tablaPattern[patternStep], patternStep % 4 === 0 || currentPart === 7 ? 0.42 : 0.24);
   }
 
   if (kickPattern[patternStep] === 1) {
@@ -973,12 +1028,16 @@ function playCurrentStep() {
   if (isInstrumentEnabled("bass")) playBass(bassPattern[patternStep]);
   if (isInstrumentEnabled("sax")) playSax(melodyPattern[patternStep]);
 
-  if ((patternStep === 3 || patternStep === 11) && isInstrumentEnabled("guitar")) {
-    playGuitar(52);
+  if ((patternStep === 3 || patternStep === 11 || (currentPart === 5 && patternStep === 15)) && isInstrumentEnabled("piano")) {
+    playPiano(patternStep === 3 ? "C4" : patternStep === 11 ? "A3" : "Fs3");
   }
 
-  if ((patternStep === 7 || patternStep === 15) && isInstrumentEnabled("tube")) {
-    playTube(48);
+  if ((patternStep === 0 || (currentPart === 4 && patternStep === 8)) && isInstrumentEnabled("tanpura")) {
+    playTanpura(currentPart % 2);
+  }
+
+  if ((patternStep === 7 || patternStep === 15 || (currentPart === 6 && patternStep === 3)) && isInstrumentEnabled("bowls")) {
+    playBowl((currentPart + patternStep) % 6);
   }
 }
 
@@ -1012,13 +1071,13 @@ function playTabla(stroke, level) {
 
 function playBass(midi) {
   let frequency = midiToFrequency(midi);
-  updateTelemetry(frequency, 0.42, "Triangle bass");
+  updateTelemetry(frequency, 0.50, "Triangle bass");
 
   bassSound.freq(frequency, 0.08);
-  bassSound.amp(0.42 * mixerLevels.bass, 0.08);
+  bassSound.amp(0.50 * mixerLevels.bass, 0.08);
 
   scheduleEnvelope(function() {
-    bassSound.amp(0.30 * mixerLevels.bass, 0.15);
+    bassSound.amp(0.36 * mixerLevels.bass, 0.15);
   }, 250);
 }
 
@@ -1034,28 +1093,22 @@ function playSax(midi) {
   }, 250);
 }
 
-function playGuitar(midi) {
-  let frequency = midiToFrequency(midi);
-  updateTelemetry(frequency, 0.10, "Triangle guitar");
-
-  guitarSound.freq(frequency);
-  guitarSound.amp(0.10 * mixerLevels.fx, 0.02);
-
-  scheduleEnvelope(function() {
-    guitarSound.amp(0, 0.30);
-  }, 180);
+function playTanpura(index) {
+  const sample = tanpuraSounds[index % tanpuraSounds.length];
+  updateTelemetry(130.81, 0.12, "Tanpura drone");
+  if (sample && sample.isLoaded()) sample.play(0, 1, 0.12 * mixerLevels.tanpura);
 }
 
-function playTube(midi) {
-  let frequency = midiToFrequency(midi);
-  updateTelemetry(frequency, 0.12, "Sine tube");
+function playBowl(index) {
+  const sample = bowlSounds[index % bowlSounds.length];
+  updateTelemetry(261.63, 0.14, "Singing bowl");
+  if (sample && sample.isLoaded()) sample.play(0, 1, 0.14 * mixerLevels.bowls);
+}
 
-  tubeSound.freq(frequency);
-  tubeSound.amp(0.12 * mixerLevels.fx, 0.05);
-
-  scheduleEnvelope(function() {
-    tubeSound.amp(0, 0.35);
-  }, 250);
+function playPiano(note) {
+  const sample = pianoSounds[note];
+  updateTelemetry(261.63, 0.16, "Piano " + note);
+  if (sample && sample.isLoaded()) sample.play(0, 1, 0.16 * mixerLevels.piano);
 }
 
 function playSubBass(midi) {
@@ -1081,8 +1134,6 @@ function startEverything() {
   crashSound.start();
   bassSound.start();
   saxSound.start();
-  guitarSound.start();
-  tubeSound.start();
   subBassSound.start();
 }
 
@@ -1096,6 +1147,9 @@ function startPlayback() {
   performanceStartTime = millis();
   performanceElapsed = 0;
   autoStage = 0;
+  nextSignatureChangeAt = 300;
+  signatureChangePending = false;
+  recentGrooveParts = [0];
   currentStep = 0;
   currentBar = 0;
   currentPart = 0;
@@ -1126,11 +1180,10 @@ function stopEverything() {
 
   bassSound.amp(0, 0.01);
   saxSound.amp(0, 0.01);
-  guitarSound.amp(0, 0.01);
-  tubeSound.amp(0, 0.01);
   subBassSound.amp(0, 0.01);
 
-  Object.values(tablaSounds).forEach(function(sample) {
+  const activeSamples = Object.values(tablaSounds).concat(tanpuraSounds, bowlSounds, Object.values(pianoSounds));
+  activeSamples.forEach(function(sample) {
     if (sample && sample.isPlaying()) sample.stop();
   });
 
