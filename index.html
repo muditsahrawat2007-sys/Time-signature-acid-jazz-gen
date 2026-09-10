@@ -402,7 +402,10 @@ let tanpuraSounds = [];
 let pianoSounds = {};
 
 let playing = false;
+let audioEnabled = false;
+let masterLevel = 0.75;
 let pendingTimeouts = [];
+let saxNoteId = 0;
 
 let currentStep = 0;
 let currentBar = 0;
@@ -455,6 +458,12 @@ function updateTelemetry(frequency, amplitude, timbre) {
   soundTelemetry.frequency = frequency;
   soundTelemetry.amplitude = amplitude;
   soundTelemetry.timbre = timbre;
+}
+
+function setMasterOutput(level) {
+  if (p5.soundOut && p5.soundOut.output && p5.soundOut.output.gain) {
+    p5.soundOut.output.gain.value = Math.max(0, Math.min(1, level));
+  }
 }
 
 function renderTelemetry() {
@@ -740,7 +749,8 @@ function setupTransportControls() {
 
   volumeControl.addEventListener("input", function(event) {
     const level = Number(event.target.value);
-    masterVolume(level, 0.02);
+    masterLevel = level;
+    setMasterOutput(audioEnabled ? level : 0);
     document.getElementById("volumeValue").textContent = Math.round(level * 100) + "%";
   });
 
@@ -770,7 +780,7 @@ function scheduleEnvelope(callback, delay) {
     pendingTimeouts = pendingTimeouts.filter(function(id) {
       return id !== timeoutId;
     });
-    callback();
+    if (audioEnabled && playing) callback();
   }, delay);
   pendingTimeouts.push(timeoutId);
 }
@@ -1029,6 +1039,7 @@ function playCrash() {
 }
 
 function playTabla(stroke, level) {
+  if (!audioEnabled || !playing) return;
   const sample = tablaSounds[stroke];
   if (sample && sample.isLoaded()) {
     sample.play(0, 1, level * mixerLevels.tabla);
@@ -1036,18 +1047,22 @@ function playTabla(stroke, level) {
 }
 
 function playSax(midi) {
+  if (!audioEnabled || !playing) return;
   let frequency = midiToFrequency(midi);
+  const noteId = ++saxNoteId;
   updateTelemetry(frequency, 0.13, "Sawtooth sax");
 
-  saxSound.freq(frequency, 0.12);
-  saxSound.amp(0.13 * mixerLevels.melody, 0.10);
+  saxSound.amp(0, 0.01);
+  saxSound.freq(frequency, 0.02);
+  saxSound.amp(0.13 * mixerLevels.melody, 0.02);
 
   scheduleEnvelope(function() {
-    saxSound.amp(0.10 * mixerLevels.melody, 0.15);
-  }, 250);
+    if (noteId === saxNoteId) saxSound.amp(0, 0.10);
+  }, 150);
 }
 
 function playTanpura(index) {
+  if (!audioEnabled || !playing) return;
   const sample = tanpuraSounds[index % tanpuraSounds.length];
   updateTelemetry(130.81, 0.12, "Tanpura drone");
   if (sample && sample.isLoaded()) {
@@ -1059,6 +1074,7 @@ function playTanpura(index) {
 }
 
 function playPiano(note) {
+  if (!audioEnabled || !playing) return;
   const sample = pianoSounds[note];
   updateTelemetry(261.63, 0.16, "Piano " + note);
   if (sample && sample.readyState >= 2) {
@@ -1091,6 +1107,8 @@ function startPlayback() {
   if (playing) return;
 
   startEverything();
+  audioEnabled = true;
+  setMasterOutput(masterLevel);
   playing = true;
   performanceStartTime = millis();
   performanceElapsed = 0;
@@ -1110,6 +1128,7 @@ function startPlayback() {
 
 function stopPlayback() {
   playing = false;
+  audioEnabled = false;
   stopEverything();
   document.getElementById("startButton").disabled = false;
   document.getElementById("stopButton").disabled = true;
@@ -1121,6 +1140,8 @@ function stopPlayback() {
 }
 
 function stopEverything() {
+  audioEnabled = false;
+  setMasterOutput(0);
   pendingTimeouts.forEach(function(timeoutId) {
     clearTimeout(timeoutId);
   });
@@ -1128,6 +1149,7 @@ function stopEverything() {
 
   saxSound.amp(0);
   pianoSound.amp(0);
+  saxNoteId++;
 
   const activeSamples = Object.values(tablaSounds).concat(tanpuraSounds);
   activeSamples.forEach(function(sample) {
