@@ -290,6 +290,9 @@
           <output id="swingValue" for="swingControl">14%</output>
         </label>
       </div>
+      <label class="knob-control" for="producerTagFile">PRODUCER TAG
+        <input id="producerTagFile" type="file" accept="audio/*" aria-label="Choose producer tag audio">
+      </label>
       <label for="timeSigSelect">TIME SIGNATURE
         <select id="timeSigSelect" aria-label="Choose time signature"></select>
       </label>
@@ -406,6 +409,8 @@ let nativeAudioContext;
 let nativeMasterGain;
 let nativeSaxOscillator;
 let nativeSaxGain;
+let producerTagAudio;
+let producerTagUrl;
 
 let playing = false;
 let audioEnabled = false;
@@ -780,6 +785,7 @@ function setupTransportControls() {
   const volumeControl = document.getElementById("volumeControl");
   const tempoControl = document.getElementById("tempoControl");
   const swingControl = document.getElementById("swingControl");
+  const producerTagFile = document.getElementById("producerTagFile");
 
   volumeControl.addEventListener("input", function(event) {
     const level = Number(event.target.value);
@@ -797,6 +803,16 @@ function setupTransportControls() {
   swingControl.addEventListener("input", function(event) {
     swingAmount = Number(event.target.value);
     document.getElementById("swingValue").textContent = Math.round(swingAmount * 100) + "%";
+  });
+
+  producerTagFile.addEventListener("change", function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (producerTagUrl) URL.revokeObjectURL(producerTagUrl);
+    producerTagUrl = URL.createObjectURL(file);
+    producerTagAudio = new Audio(producerTagUrl);
+    producerTagAudio.preload = "auto";
+    producerTagAudio.load();
   });
 
   startButton.addEventListener("click", startPlayback);
@@ -1000,6 +1016,7 @@ function draw() {
 
     if (currentStep >= stepsPerBar) {
       currentStep = 0;
+      playProducerTag();
       currentBar++;
 
       if (currentBar >= 4) {
@@ -1057,6 +1074,14 @@ function playCurrentStep() {
     playTanpura(currentPart % 2);
   }
 
+}
+
+function playProducerTag() {
+  if (!audioEnabled || !playing || !producerTagAudio) return;
+  producerTagAudio.pause();
+  producerTagAudio.currentTime = 0;
+  producerTagAudio.volume = Math.min(1, masterLevel);
+  producerTagAudio.play().catch(function() {});
 }
 
 function playKick() {
@@ -1189,6 +1214,7 @@ function startPlayback() {
   document.getElementById("startButton").disabled = true;
   document.getElementById("stopButton").disabled = false;
   renderPerformanceStatus();
+  playProducerTag();
   playCurrentStep();
 }
 
